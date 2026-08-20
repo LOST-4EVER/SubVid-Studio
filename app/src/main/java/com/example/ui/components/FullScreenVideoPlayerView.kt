@@ -32,7 +32,6 @@ import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.Slider
@@ -46,7 +45,6 @@ import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -55,8 +53,8 @@ import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Shadow
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.testTag
@@ -73,7 +71,9 @@ import androidx.compose.ui.viewinterop.AndroidView
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.ui.AspectRatioFrameLayout
 import androidx.media3.ui.PlayerView
+import com.example.model.SubtitleAlignment
 import com.example.model.SubtitleCue
+import com.example.model.SubtitleStyle
 import com.example.model.SubtitleTrack
 import com.example.model.VideoMetadata
 import com.example.player.PlayerUiState
@@ -83,6 +83,7 @@ import com.example.ui.theme.AccentAmber
 import com.example.ui.theme.AccentCyan
 import com.example.ui.theme.AccentEmerald
 import com.example.ui.theme.AccentRose
+import com.example.ui.theme.ImmersiveActionBg
 import com.example.ui.theme.ImmersivePrimary
 import kotlinx.coroutines.delay
 import java.util.Locale
@@ -112,10 +113,10 @@ fun FullScreenVideoPlayerView(
     var resizeMode by remember { mutableIntStateOf(AspectRatioFrameLayout.RESIZE_MODE_FIT) }
     val speeds = listOf(0.5f, 0.75f, 1.0f, 1.25f, 1.5f, 2.0f)
 
-    // Auto-hide controls after 4 seconds of inactivity when playing
+    // Auto-hide controls after 5 seconds of inactivity when playing
     LaunchedEffect(showControls, playerState.isPlaying, isUserDragging) {
         if (showControls && playerState.isPlaying && !isUserDragging) {
-            delay(4000)
+            delay(5000)
             showControls = false
         }
     }
@@ -158,15 +159,14 @@ fun FullScreenVideoPlayerView(
         BoxWithConstraints(
             modifier = Modifier.fillMaxSize()
         ) {
-            val containerWidthPx = constraints.maxWidth.toFloat()
-            val containerHeightPx = constraints.maxHeight.toFloat()
+            val containerWidthPx = constraints.maxWidth.toFloat().coerceAtLeast(1f)
+            val containerHeightPx = constraints.maxHeight.toFloat().coerceAtLeast(1f)
 
-            // Calculate actual video frame within container based on aspect ratio
             val videoAspect = if (playerState.videoHeight > 0) {
                 playerState.videoWidth.toFloat() / playerState.videoHeight.toFloat()
             } else 16f / 9f
 
-            val containerAspect = if (containerHeightPx > 0) containerWidthPx / containerHeightPx else 16f / 9f
+            val containerAspect = containerWidthPx / containerHeightPx
 
             val actualVideoWidth: Float
             val actualVideoHeight: Float
@@ -190,17 +190,15 @@ fun FullScreenVideoPlayerView(
                 videoOffsetY = (containerHeightPx - actualVideoHeight) / 2f
             }
 
-            // Draw Positioning Safe Area and Crosshairs when actively dragging in fullscreen
+            // Visual guide lines when dragging subtitle
             if (isUserDragging) {
                 Canvas(modifier = Modifier.fillMaxSize()) {
-                    // Safe-area dashed boundary
                     drawRect(
                         color = ImmersivePrimary.copy(alpha = 0.5f),
                         topLeft = Offset(videoOffsetX + actualVideoWidth * 0.05f, videoOffsetY + actualVideoHeight * 0.05f),
                         size = Size(actualVideoWidth * 0.90f, actualVideoHeight * 0.90f),
                         style = Stroke(width = 2f)
                     )
-                    // Center guide lines
                     drawLine(
                         color = Color.White.copy(alpha = 0.25f),
                         start = Offset(videoOffsetX + actualVideoWidth * 0.5f, videoOffsetY),
@@ -216,10 +214,13 @@ fun FullScreenVideoPlayerView(
                 }
             }
 
-            // Render Active Cue
+            // Render Active Cue Text
             if (activeCue != null && activeCue.text.isNotEmpty()) {
                 val cue = activeCue
                 val style = cue.style
+                val hasDarkBox = style.hasBackground
+                val textColor = Color(style.textColorArgb)
+                val bgColor = if (hasDarkBox) Color(style.backgroundColorArgb) else Color.Transparent
 
                 val posXInVideo = videoOffsetX + (cue.posX * actualVideoWidth)
                 val posYInVideo = videoOffsetY + (cue.posY * actualVideoHeight)
@@ -228,12 +229,12 @@ fun FullScreenVideoPlayerView(
                 var cueHeightPx by remember { mutableFloatStateOf(60f) }
 
                 val clampedOffsetX = (posXInVideo - (cueWidthPx / 2f)).coerceIn(
-                    videoOffsetX,
-                    videoOffsetX + actualVideoWidth - cueWidthPx
+                    videoOffsetX + 8f,
+                    (videoOffsetX + actualVideoWidth - cueWidthPx - 8f).coerceAtLeast(videoOffsetX + 8f)
                 )
                 val clampedOffsetY = (posYInVideo - (cueHeightPx / 2f)).coerceIn(
-                    videoOffsetY,
-                    videoOffsetY + actualVideoHeight - cueHeightPx
+                    videoOffsetY + 8f,
+                    (videoOffsetY + actualVideoHeight - cueHeightPx - 8f).coerceAtLeast(videoOffsetY + 8f)
                 )
 
                 Box(
@@ -258,15 +259,17 @@ fun FullScreenVideoPlayerView(
                                 }
                             )
                         }
-                        .clip(RoundedCornerShape(style.cornerRadiusDp.dp))
                         .drawBehind {
                             cueWidthPx = size.width
                             cueHeightPx = size.height
                         }
-                        .background(Color(style.backgroundColorArgb))
+                        .clip(RoundedCornerShape(style.cornerRadiusDp.dp))
+                        .background(bgColor)
                         .then(
                             if (isUserDragging) {
                                 Modifier.border(1.5.dp, ImmersivePrimary, RoundedCornerShape(style.cornerRadiusDp.dp))
+                            } else if (hasDarkBox) {
+                                Modifier.border(1.dp, Color.White.copy(alpha = 0.25f), RoundedCornerShape(style.cornerRadiusDp.dp))
                             } else Modifier
                         )
                         .padding(
@@ -276,12 +279,19 @@ fun FullScreenVideoPlayerView(
                 ) {
                     Text(
                         text = cue.text,
-                        color = Color(style.textColorArgb),
+                        color = textColor,
                         fontSize = (style.fontSizeSp * 1.15f).sp,
                         fontWeight = if (style.isBold) FontWeight.Bold else FontWeight.Normal,
                         fontStyle = if (style.isItalic) FontStyle.Italic else FontStyle.Normal,
                         textDecoration = if (style.isUnderline) TextDecoration.Underline else TextDecoration.None,
-                        textAlign = TextAlign.Center,
+                        style = TextStyle(
+                            shadow = if (!hasDarkBox) Shadow(color = Color.Black, offset = Offset(2f, 2f), blurRadius = 5f) else null
+                        ),
+                        textAlign = when (cue.alignment) {
+                            SubtitleAlignment.BOTTOM_START, SubtitleAlignment.TOP_START, SubtitleAlignment.CENTER_START -> TextAlign.Start
+                            SubtitleAlignment.BOTTOM_END, SubtitleAlignment.TOP_END, SubtitleAlignment.CENTER_END -> TextAlign.End
+                            else -> TextAlign.Center
+                        },
                         lineHeight = (style.fontSizeSp * 1.4f).sp
                     )
                 }
@@ -297,10 +307,10 @@ fun FullScreenVideoPlayerView(
                 .align(Alignment.TopCenter)
                 .fillMaxWidth()
                 .statusBarsPadding()
-                .padding(horizontal = 16.dp, vertical = 12.dp)
+                .padding(horizontal = 14.dp, vertical = 10.dp)
         ) {
             Surface(
-                shape = RoundedCornerShape(24.dp),
+                shape = RoundedCornerShape(20.dp),
                 color = Color.Black.copy(alpha = 0.75f),
                 border = androidx.compose.foundation.BorderStroke(1.dp, Color.White.copy(alpha = 0.18f)),
                 shadowElevation = 8.dp
@@ -308,7 +318,7 @@ fun FullScreenVideoPlayerView(
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(horizontal = 12.dp, vertical = 8.dp),
+                        .padding(horizontal = 12.dp, vertical = 6.dp),
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
@@ -327,14 +337,14 @@ fun FullScreenVideoPlayerView(
                             Icon(
                                 imageVector = StudioIcons.FullscreenExit,
                                 contentDescription = "Exit Fullscreen",
-                                tint = Color.White,
+                                tint = ImmersivePrimary,
                                 modifier = Modifier.size(20.dp)
                             )
                         }
 
                         Column {
                             Text(
-                                text = videoMetadata.fileName.ifEmpty { "Live Fullscreen Video" },
+                                text = videoMetadata.fileName.ifEmpty { "Fullscreen Video" },
                                 color = Color.White,
                                 fontSize = 13.sp,
                                 fontWeight = FontWeight.Bold,
@@ -443,23 +453,22 @@ fun FullScreenVideoPlayerView(
                 .align(Alignment.BottomCenter)
                 .fillMaxWidth()
                 .navigationBarsPadding()
-                .padding(horizontal = 16.dp, vertical = 14.dp)
+                .padding(horizontal = 14.dp, vertical = 10.dp)
         ) {
             Column(
                 horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.spacedBy(8.dp)
+                verticalArrangement = Arrangement.spacedBy(6.dp)
             ) {
                 // Timecode & Progress Slider Card
                 Surface(
-                    shape = RoundedCornerShape(20.dp),
+                    shape = RoundedCornerShape(18.dp),
                     color = Color.Black.copy(alpha = 0.80f),
                     border = androidx.compose.foundation.BorderStroke(1.dp, Color.White.copy(alpha = 0.18f)),
                     modifier = Modifier.fillMaxWidth()
                 ) {
                     Column(
-                        modifier = Modifier.padding(horizontal = 14.dp, vertical = 8.dp)
+                        modifier = Modifier.padding(horizontal = 14.dp, vertical = 6.dp)
                     ) {
-                        // Timecodes
                         Row(
                             modifier = Modifier.fillMaxWidth(),
                             horizontalArrangement = Arrangement.SpaceBetween,
@@ -475,12 +484,12 @@ fun FullScreenVideoPlayerView(
 
                             if (activeCue != null) {
                                 val cueIndex = subtitleTrack.cues.indexOfFirst { it.id == activeCue.id }
-                                val cueLabel = if (cueIndex >= 0) "#${cueIndex + 1}" else "Live"
+                                val cueLabel = if (cueIndex >= 0) "Cue #${cueIndex + 1} of ${subtitleTrack.cues.size}" else "Live Cue"
                                 Text(
-                                    text = "Active Cue: $cueLabel",
+                                    text = cueLabel,
                                     color = AccentCyan,
                                     fontSize = 11.sp,
-                                    fontWeight = FontWeight.Medium
+                                    fontWeight = FontWeight.SemiBold
                                 )
                             }
 
@@ -510,7 +519,7 @@ fun FullScreenVideoPlayerView(
                             ),
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .height(24.dp)
+                                .height(22.dp)
                                 .testTag("fullscreen_timeline_slider")
                         )
                     }
@@ -525,8 +534,8 @@ fun FullScreenVideoPlayerView(
                 ) {
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(8.dp),
-                        modifier = Modifier.padding(horizontal = 14.dp, vertical = 6.dp)
+                        horizontalArrangement = Arrangement.spacedBy(6.dp),
+                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 5.dp)
                     ) {
                         // Speed Selector
                         Surface(
@@ -540,9 +549,9 @@ fun FullScreenVideoPlayerView(
                             Text(
                                 text = "${playerState.playbackSpeed}x",
                                 color = AccentCyan,
-                                fontSize = 12.sp,
+                                fontSize = 11.sp,
                                 fontWeight = FontWeight.Bold,
-                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
+                                modifier = Modifier.padding(horizontal = 7.dp, vertical = 3.dp)
                             )
                         }
 
@@ -580,7 +589,7 @@ fun FullScreenVideoPlayerView(
                             Text(
                                 text = "-1f",
                                 color = AccentCyan,
-                                fontSize = 12.sp,
+                                fontSize = 11.sp,
                                 fontWeight = FontWeight.Bold
                             )
                         }
@@ -589,7 +598,7 @@ fun FullScreenVideoPlayerView(
                         Surface(
                             shape = CircleShape,
                             color = ImmersivePrimary,
-                            modifier = Modifier.size(46.dp)
+                            modifier = Modifier.size(44.dp)
                         ) {
                             IconButton(
                                 onClick = { playerController.togglePlayPause() },
@@ -599,7 +608,7 @@ fun FullScreenVideoPlayerView(
                                     imageVector = if (playerState.isPlaying) StudioIcons.Pause else StudioIcons.Play,
                                     contentDescription = if (playerState.isPlaying) "Pause Video" else "Play Video",
                                     tint = Color.Black,
-                                    modifier = Modifier.size(24.dp)
+                                    modifier = Modifier.size(22.dp)
                                 )
                             }
                         }
@@ -612,7 +621,7 @@ fun FullScreenVideoPlayerView(
                             Text(
                                 text = "+1f",
                                 color = AccentCyan,
-                                fontSize = 12.sp,
+                                fontSize = 11.sp,
                                 fontWeight = FontWeight.Bold
                             )
                         }

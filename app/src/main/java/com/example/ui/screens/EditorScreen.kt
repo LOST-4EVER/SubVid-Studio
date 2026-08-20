@@ -12,8 +12,10 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
@@ -129,7 +131,9 @@ fun EditorScreen(
             modifier = modifier
                 .fillMaxSize()
                 .background(ImmersiveBg)
-                .padding(horizontal = 12.dp, vertical = 8.dp),
+                .statusBarsPadding()
+                .padding(horizontal = 12.dp, vertical = 6.dp)
+                .verticalScroll(rememberScrollState()),
             verticalArrangement = Arrangement.spacedBy(10.dp)
         ) {
             // 1. Modular Studio Header with Quick Media Actions
@@ -224,7 +228,7 @@ fun EditorScreen(
                     },
                     modifier = Modifier
                         .fillMaxWidth()
-                        .height(200.dp)
+                        .height(210.dp)
                 )
             }
 
@@ -245,43 +249,37 @@ fun EditorScreen(
                 onShiftCueTiming = { cue, delta -> viewModel.shiftCueTiming(cue, delta) }
             )
 
-            // 4. Scrollable bottom sheet section for inspector & action belt
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .weight(1f)
-                    .verticalScroll(rememberScrollState()),
-                verticalArrangement = Arrangement.spacedBy(10.dp)
-            ) {
-                // 4. Live Selected Cue Inspector Component
-                val currentSelected = selectedCue ?: activeCue
-                if (currentSelected != null) {
-                    val currentIdx = subtitleTrack.cues.indexOfFirst { it.id == currentSelected.id }
-                    EditorCueInspector(
-                        selectedCue = currentSelected,
-                        totalCuesCount = subtitleTrack.cues.size,
-                        currentCueIndex = currentIdx,
-                        onSelectPreviousCue = { viewModel.selectPreviousCue() },
-                        onSelectNextCue = { viewModel.selectNextCue() },
-                        onDuplicateCue = { viewModel.duplicateSelectedCue() },
-                        onUpdateCueText = { cue, text -> viewModel.updateCueText(cue, text) }
-                    )
-                }
+            // 4. Live Selected Cue Inspector Component (Handles Single-Cue Editing & Empty State)
+            val currentSelected = selectedCue ?: activeCue
+            val currentIdx = if (currentSelected != null) subtitleTrack.cues.indexOfFirst { it.id == currentSelected.id } else -1
 
-                // 5. Studio Action Strip / Toolbelt Component
-                EditorToolbeltStrip(
-                    onPlacementClick = { viewModel.setShowPlacementDialog(true) },
-                    onStyleClick = { viewModel.setShowStyleDialog(true) },
-                    onSubtitlesListClick = { viewModel.setShowSubtitleListSheet(true) },
-                    onExportClick = { viewModel.setShowExportDialog(true) },
-                    onFullscreenClick = if (videoMetadata.uriString.isNotEmpty()) {
-                        { viewModel.setFullscreenVideo(true) }
-                    } else null
-                )
+            EditorCueInspector(
+                selectedCue = currentSelected,
+                totalCuesCount = subtitleTrack.cues.size,
+                currentCueIndex = currentIdx,
+                onSelectPreviousCue = { viewModel.selectPreviousCue() },
+                onSelectNextCue = { viewModel.selectNextCue() },
+                onDuplicateCue = { viewModel.duplicateSelectedCue() },
+                onDeleteCue = { viewModel.deleteSelectedCue() },
+                onUpdateCueText = { cue, text -> viewModel.updateCueText(cue, text) },
+                onUpdateCueStyle = { cue, style -> viewModel.updateSubtitleStyle(style, applyToAll = false) },
+                onJumpToCue = { cue -> viewModel.jumpToCue(cue) },
+                onAddFirstCue = { viewModel.addCueAtCurrentPosition() }
+            )
 
-                // Bottom spacing for navigation bar
-                Spacer(Modifier.height(60.dp))
-            }
+            // 5. Studio Action Strip / Toolbelt Component
+            EditorToolbeltStrip(
+                onPlacementClick = { viewModel.setShowPlacementDialog(true) },
+                onStyleClick = { viewModel.setShowStyleDialog(true) },
+                onSubtitlesListClick = { viewModel.setShowSubtitleListSheet(true) },
+                onExportClick = { viewModel.setShowExportDialog(true) },
+                onFullscreenClick = if (videoMetadata.uriString.isNotEmpty()) {
+                    { viewModel.setFullscreenVideo(true) }
+                } else null
+            )
+
+            // Bottom spacing for navigation bar
+            Spacer(Modifier.height(80.dp))
         }
     }
 

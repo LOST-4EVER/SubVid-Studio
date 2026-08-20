@@ -303,6 +303,7 @@ object StudioIcons {
     val Rewind: ImageVector = Icons.Filled.FastRewind
     val Forward: ImageVector = Icons.Filled.FastForward
     val Cut: ImageVector = Icons.Filled.ContentCut
+    val Copy: ImageVector = Icons.Filled.Layers
     val Edit: ImageVector = Icons.Filled.Edit
     val Delete: ImageVector = Icons.Filled.Delete
     val Add: ImageVector = Icons.Filled.Add

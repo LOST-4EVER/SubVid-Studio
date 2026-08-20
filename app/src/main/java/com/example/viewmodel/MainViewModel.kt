@@ -128,20 +128,8 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         if (currentActive != null && currentActive.isActiveAt(currentMs)) {
             return currentActive
         }
-        var low = 0
-        var high = cues.size - 1
-        while (low <= high) {
-            val mid = (low + high) ushr 1
-            val cue = cues[mid]
-            if (currentMs < cue.startTimeMs) {
-                high = mid - 1
-            } else if (currentMs > cue.endTimeMs) {
-                low = mid + 1
-            } else {
-                return cue
-            }
-        }
-        return null
+        // Direct search handles unsorted, trimmed, or overlapping cues with 100% reliability
+        return cues.firstOrNull { it.isActiveAt(currentMs) }
     }
 
     fun setTab(tab: AppTab) {
@@ -300,7 +288,13 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                 } ?: SubtitleTrack(title = fileName, cues = emptyList())
 
                 _subtitleTrack.value = track
-                _selectedCue.value = track.cues.firstOrNull()
+                val firstCue = track.cues.firstOrNull()
+                _selectedCue.value = firstCue
+                if (firstCue != null && (_videoMetadata.value.uriString.isNotEmpty())) {
+                    if (playerState.value.currentPositionMs <= 1000L || _activeCue.value == null) {
+                        jumpToCue(firstCue)
+                    }
+                }
                 saveCurrentProject()
                 _toastMessage.value = "Loaded ${track.cues.size} cues from $fileName"
             } catch (e: Exception) {
@@ -374,12 +368,9 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         val currentIdx = cues.indexOfFirst { it.id == _selectedCue.value?.id }
         if (currentIdx in 0 until cues.size - 1) {
             val nextCue = cues[currentIdx + 1]
-            _selectedCue.value = nextCue
-            playerController.seekTo(nextCue.startTimeMs)
+            jumpToCue(nextCue)
         } else if (currentIdx == -1 && cues.isNotEmpty()) {
-            val firstCue = cues.first()
-            _selectedCue.value = firstCue
-            playerController.seekTo(firstCue.startTimeMs)
+            jumpToCue(cues.first())
         }
     }
 
@@ -389,13 +380,13 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         val currentIdx = cues.indexOfFirst { it.id == _selectedCue.value?.id }
         if (currentIdx > 0) {
             val prevCue = cues[currentIdx - 1]
-            _selectedCue.value = prevCue
-            playerController.seekTo(prevCue.startTimeMs)
+            jumpToCue(prevCue)
         }
     }
 
     fun jumpToCue(cue: SubtitleCue) {
         _selectedCue.value = cue
+        _activeCue.value = cue // Immediately display this cue's text overlay on video
         playerController.seekTo(cue.startTimeMs)
     }
 
@@ -406,21 +397,28 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         applyToAll: Boolean = false
     ) {
         val targetCue = _activeCue.value ?: _selectedCue.value
+        val cues = _subtitleTrack.value.cues
+        val updatedCues = cues.map { cue ->
+            if (applyToAll || (targetCue != null && cue.id == targetCue.id)) {
+                cue.copy(posX = posX, posY = posY, alignment = alignment)
+            } else {
+                cue
+            }
+        }
+        _subtitleTrack.update { it.copy(cues = updatedCues) }
         if (targetCue != null) {
-            val updatedCues = _subtitleTrack.value.cues.map { cue ->
-                if (applyToAll || cue.id == targetCue.id) {
-                    cue.copy(posX = posX, posY = posY, alignment = alignment)
-                } else {
-                    cue
+            val refreshed = updatedCues.firstOrNull { it.id == targetCue.id }
+            if (refreshed != null) {
+                _selectedCue.value = refreshed
+                if (_activeCue.value?.id == refreshed.id) {
+                    _activeCue.value = refreshed
                 }
             }
-            _subtitleTrack.update { it.copy(cues = updatedCues) }
-            _selectedCue.value = updatedCues.firstOrNull { it.id == targetCue.id }
         }
     }
 
     fun updateSubtitleStyle(style: SubtitleStyle, applyToAll: Boolean) {
-        val targetCue = _selectedCue.value
+        val targetCue = _selectedCue.value ?: _activeCue.value
         val updatedCues = _subtitleTrack.value.cues.map { cue ->
             if (applyToAll || (targetCue != null && cue.id == targetCue.id)) {
                 cue.copy(style = style)
@@ -428,9 +426,18 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                 cue
             }
         }
-        _subtitleTrack.update { it.copy(cues = updatedCues) }
+        _subtitleTrack.update {
+            if (applyToAll) it.copy(cues = updatedCues, defaultStyle = style)
+            else it.copy(cues = updatedCues)
+        }
         if (targetCue != null) {
-            _selectedCue.value = updatedCues.firstOrNull { it.id == targetCue.id }
+            val refreshed = updatedCues.firstOrNull { it.id == targetCue.id }
+            if (refreshed != null) {
+                _selectedCue.value = refreshed
+                if (_activeCue.value?.id == refreshed.id) {
+                    _activeCue.value = refreshed
+                }
+            }
         }
     }
 
@@ -441,6 +448,9 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         _subtitleTrack.update { it.copy(cues = updatedCues) }
         if (_selectedCue.value?.id == cue.id) {
             _selectedCue.value = _selectedCue.value?.copy(text = newText)
+        }
+        if (_activeCue.value?.id == cue.id) {
+            _activeCue.value = _activeCue.value?.copy(text = newText)
         }
     }
 

@@ -51,16 +51,18 @@ data class SubtitleStyle(
     val textColorArgb: Long = 0xFFFFFFFF,
     val strokeColorArgb: Long = 0xFF000000,
     val strokeWidthDp: Float = 2.5f,
-    val backgroundColorArgb: Long = 0x88000000, // Semi-transparent black box
+    val backgroundColorArgb: Long = 0x00000000, // Default transparent (clean look), toggleable to semi-transparent black
     val cornerRadiusDp: Float = 6f,
-    val paddingHorizontalDp: Float = 12f,
-    val paddingVerticalDp: Float = 6f,
+    val paddingHorizontalDp: Float = 10f,
+    val paddingVerticalDp: Float = 4f,
     val isBold: Boolean = true,
     val isItalic: Boolean = false,
     val isUnderline: Boolean = false,
-    val shadowRadiusDp: Float = 3f,
-    val shadowColorArgb: Long = 0xAA000000
-)
+    val shadowRadiusDp: Float = 4f,
+    val shadowColorArgb: Long = 0xCC000000
+) {
+    val hasBackground: Boolean get() = ((backgroundColorArgb ushr 24) and 0xFF) > 15
+}
 
 data class SubtitleCue(
     val id: String = UUID.randomUUID().toString(),

@@ -28,7 +28,6 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -42,12 +41,15 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.PathEffect
+import androidx.compose.ui.graphics.Shadow
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
@@ -69,10 +71,8 @@ import com.example.ui.theme.AccentCyan
 import com.example.ui.theme.AccentEmerald
 import com.example.ui.theme.AccentRose
 import com.example.ui.theme.ImmersiveActionBg
-import com.example.ui.theme.ImmersiveBg
 import com.example.ui.theme.ImmersiveBorder
 import com.example.ui.theme.ImmersivePrimary
-import com.example.ui.theme.ImmersiveSurface
 import com.example.ui.theme.ImmersiveTextPrimary
 import com.example.ui.theme.ImmersiveTextSecondary
 import kotlin.math.roundToInt
@@ -95,13 +95,13 @@ fun VideoPlayerView(
 
     Box(
         modifier = modifier
-            .clip(RoundedCornerShape(20.dp))
+            .clip(RoundedCornerShape(16.dp))
             .background(Color.Black)
-            .border(1.dp, ImmersiveBorder, RoundedCornerShape(20.dp))
-            .shadow(16.dp, RoundedCornerShape(20.dp))
+            .border(1.dp, ImmersiveBorder, RoundedCornerShape(16.dp))
+            .shadow(12.dp, RoundedCornerShape(16.dp))
             .clickable { showControls = !showControls }
     ) {
-        // 1. ExoPlayer Video Canvas
+        // 1. ExoPlayer Surface
         AndroidView(
             factory = { ctx ->
                 PlayerView(ctx).apply {
@@ -128,8 +128,8 @@ fun VideoPlayerView(
                 .fillMaxSize()
                 .background(
                     Brush.radialGradient(
-                        colors = listOf(Color.Transparent, Color.Black.copy(alpha = 0.35f)),
-                        radius = 1200f
+                        colors = listOf(Color.Transparent, Color.Black.copy(alpha = 0.25f)),
+                        radius = 1000f
                     )
                 )
         )
@@ -141,7 +141,6 @@ fun VideoPlayerView(
             val containerWidthPx = constraints.maxWidth.toFloat().coerceAtLeast(1f)
             val containerHeightPx = constraints.maxHeight.toFloat().coerceAtLeast(1f)
 
-            // Calculate actual video frame dimensions within RESIZE_MODE_FIT
             val videoAspect = if (playerState.videoHeight > 0) {
                 playerState.videoWidth.toFloat() / playerState.videoHeight.toFloat()
             } else {
@@ -174,26 +173,26 @@ fun VideoPlayerView(
                 Canvas(modifier = Modifier.fillMaxSize()) {
                     val targetX = videoOffsetX + (activeCue.posX * videoRenderWidth)
                     val targetY = videoOffsetY + (activeCue.posY * videoRenderHeight)
-                    val dashEffect = PathEffect.dashPathEffect(floatArrayOf(10f, 10f), 0f)
+                    val dashEffect = PathEffect.dashPathEffect(floatArrayOf(8f, 8f), 0f)
 
                     // Video bounds safe-area rectangle
                     drawRect(
-                        color = AccentCyan.copy(alpha = 0.35f),
+                        color = AccentCyan.copy(alpha = 0.4f),
                         topLeft = Offset(videoOffsetX, videoOffsetY),
-                        size = androidx.compose.ui.geometry.Size(videoRenderWidth, videoRenderHeight),
+                        size = Size(videoRenderWidth, videoRenderHeight),
                         style = androidx.compose.ui.graphics.drawscope.Stroke(width = 1.5f, pathEffect = dashEffect)
                     )
 
                     // Crosshair guides
                     drawLine(
-                        color = ImmersivePrimary.copy(alpha = 0.5f),
+                        color = ImmersivePrimary.copy(alpha = 0.6f),
                         start = Offset(videoOffsetX, targetY),
                         end = Offset(videoOffsetX + videoRenderWidth, targetY),
                         strokeWidth = 1f,
                         pathEffect = dashEffect
                     )
                     drawLine(
-                        color = ImmersivePrimary.copy(alpha = 0.5f),
+                        color = ImmersivePrimary.copy(alpha = 0.6f),
                         start = Offset(targetX, videoOffsetY),
                         end = Offset(targetX, videoOffsetY + videoRenderHeight),
                         strokeWidth = 1f,
@@ -202,40 +201,20 @@ fun VideoPlayerView(
                 }
             }
 
-            if (activeCue != null) {
-                // Calculate anchor coordinates relative to active video frame
+            if (activeCue != null && activeCue.text.isNotEmpty()) {
                 val anchorCenterX = videoOffsetX + (activeCue.posX * videoRenderWidth)
                 val anchorCenterY = videoOffsetY + (activeCue.posY * videoRenderHeight)
 
-                // Anchor positioning based on alignment
                 val (rawLeftPx, rawTopPx) = when (activeCue.alignment) {
-                    SubtitleAlignment.BOTTOM_START -> {
-                        Pair(anchorCenterX, anchorCenterY - subtitleHeightPx)
-                    }
-                    SubtitleAlignment.BOTTOM_CENTER -> {
-                        Pair(anchorCenterX - (subtitleWidthPx / 2f), anchorCenterY - subtitleHeightPx)
-                    }
-                    SubtitleAlignment.BOTTOM_END -> {
-                        Pair(anchorCenterX - subtitleWidthPx, anchorCenterY - subtitleHeightPx)
-                    }
-                    SubtitleAlignment.TOP_START -> {
-                        Pair(anchorCenterX, anchorCenterY)
-                    }
-                    SubtitleAlignment.TOP_CENTER -> {
-                        Pair(anchorCenterX - (subtitleWidthPx / 2f), anchorCenterY)
-                    }
-                    SubtitleAlignment.TOP_END -> {
-                        Pair(anchorCenterX - subtitleWidthPx, anchorCenterY)
-                    }
-                    SubtitleAlignment.CENTER_START -> {
-                        Pair(anchorCenterX, anchorCenterY - (subtitleHeightPx / 2f))
-                    }
-                    SubtitleAlignment.CENTER_END -> {
-                        Pair(anchorCenterX - subtitleWidthPx, anchorCenterY - (subtitleHeightPx / 2f))
-                    }
-                    SubtitleAlignment.CENTER, SubtitleAlignment.CUSTOM -> {
-                        Pair(anchorCenterX - (subtitleWidthPx / 2f), anchorCenterY - (subtitleHeightPx / 2f))
-                    }
+                    SubtitleAlignment.BOTTOM_START -> Pair(anchorCenterX, anchorCenterY - subtitleHeightPx)
+                    SubtitleAlignment.BOTTOM_CENTER -> Pair(anchorCenterX - (subtitleWidthPx / 2f), anchorCenterY - subtitleHeightPx)
+                    SubtitleAlignment.BOTTOM_END -> Pair(anchorCenterX - subtitleWidthPx, anchorCenterY - subtitleHeightPx)
+                    SubtitleAlignment.TOP_START -> Pair(anchorCenterX, anchorCenterY)
+                    SubtitleAlignment.TOP_CENTER -> Pair(anchorCenterX - (subtitleWidthPx / 2f), anchorCenterY)
+                    SubtitleAlignment.TOP_END -> Pair(anchorCenterX - subtitleWidthPx, anchorCenterY)
+                    SubtitleAlignment.CENTER_START -> Pair(anchorCenterX, anchorCenterY - (subtitleHeightPx / 2f))
+                    SubtitleAlignment.CENTER_END -> Pair(anchorCenterX - subtitleWidthPx, anchorCenterY - (subtitleHeightPx / 2f))
+                    SubtitleAlignment.CENTER, SubtitleAlignment.CUSTOM -> Pair(anchorCenterX - (subtitleWidthPx / 2f), anchorCenterY - (subtitleHeightPx / 2f))
                 }
 
                 val leftOffsetPx = rawLeftPx.coerceIn(
@@ -247,7 +226,11 @@ fun VideoPlayerView(
                     (videoOffsetY + videoRenderHeight - subtitleHeightPx - 4f).coerceAtLeast(videoOffsetY + 4f)
                 )
 
-                // Draggable Subtitle Element
+                val style = activeCue.style
+                val hasDarkBox = style.hasBackground
+                val textColor = Color(style.textColorArgb)
+                val bgColor = if (hasDarkBox) Color(style.backgroundColorArgb) else Color.Transparent
+
                 Box(
                     modifier = Modifier
                         .offset {
@@ -270,68 +253,50 @@ fun VideoPlayerView(
                                 change.consume()
                                 val deltaX = dragAmount.x / videoRenderWidth
                                 val deltaY = dragAmount.y / videoRenderHeight
-                                val newX = (activeCue.posX + deltaX).coerceIn(0.02f, 0.98f)
-                                val newY = (activeCue.posY + deltaY).coerceIn(0.02f, 0.98f)
+                                val newX = (activeCue.posX + deltaX).coerceIn(0.05f, 0.95f)
+                                val newY = (activeCue.posY + deltaY).coerceIn(0.05f, 0.95f)
                                 onSubtitlePositionChanged(newX, newY)
                             }
                         }
                         .clickable { onSubtitleTapped() }
+                        .clip(RoundedCornerShape(style.cornerRadiusDp.dp))
+                        .background(bgColor)
+                        .then(
+                            if (isUserDragging) {
+                                Modifier.border(1.5.dp, AccentCyan, RoundedCornerShape(style.cornerRadiusDp.dp))
+                            } else if (hasDarkBox) {
+                                Modifier.border(1.dp, Color.White.copy(alpha = 0.2f), RoundedCornerShape(style.cornerRadiusDp.dp))
+                            } else {
+                                Modifier
+                            }
+                        )
+                        .padding(
+                            horizontal = style.paddingHorizontalDp.dp,
+                            vertical = style.paddingVerticalDp.dp
+                        )
                         .testTag("subtitle_overlay_draggable")
                 ) {
-                    val style = activeCue.style
-                    val textColor = Color(style.textColorArgb)
-                    val bgColor = Color(style.backgroundColorArgb)
-                    val strokeColor = Color(style.strokeColorArgb)
-
-                    Box(
-                        modifier = Modifier
-                            .background(bgColor, RoundedCornerShape(style.cornerRadiusDp.dp))
-                            .border(
-                                width = if (isUserDragging) 2.dp else 1.2.dp,
-                                color = if (isUserDragging) AccentCyan else ImmersivePrimary.copy(alpha = 0.75f),
-                                shape = RoundedCornerShape(style.cornerRadiusDp.dp)
-                            )
-                            .padding(
-                                horizontal = style.paddingHorizontalDp.dp,
-                                vertical = style.paddingVerticalDp.dp
-                            )
-                    ) {
-                        Text(
-                            text = activeCue.text,
-                            color = textColor,
-                            fontSize = style.fontSizeSp.sp,
-                            fontWeight = if (style.isBold) FontWeight.Bold else FontWeight.Normal,
-                            fontStyle = if (style.isItalic) FontStyle.Italic else FontStyle.Normal,
-                            textDecoration = if (style.isUnderline) TextDecoration.Underline else TextDecoration.None,
-                            textAlign = when (activeCue.alignment) {
-                                SubtitleAlignment.BOTTOM_START, SubtitleAlignment.TOP_START, SubtitleAlignment.CENTER_START -> TextAlign.Start
-                                SubtitleAlignment.BOTTOM_END, SubtitleAlignment.TOP_END, SubtitleAlignment.CENTER_END -> TextAlign.End
-                                else -> TextAlign.Center
-                            },
-                            modifier = Modifier.padding(2.dp)
-                        )
-
-                        // Anchor Dots for Visual Precision Feedback
-                        Box(
-                            modifier = Modifier
-                                .size(6.dp)
-                                .offset((-3).dp, (-3).dp)
-                                .background(ImmersivePrimary, CircleShape)
-                                .align(Alignment.TopStart)
-                        )
-                        Box(
-                            modifier = Modifier
-                                .size(6.dp)
-                                .offset(3.dp, 3.dp)
-                                .background(ImmersivePrimary, CircleShape)
-                                .align(Alignment.BottomEnd)
-                        )
-                    }
+                    Text(
+                        text = activeCue.text,
+                        color = textColor,
+                        fontSize = (style.fontSizeSp * 0.9f).sp,
+                        fontWeight = if (style.isBold) FontWeight.Bold else FontWeight.Normal,
+                        fontStyle = if (style.isItalic) FontStyle.Italic else FontStyle.Normal,
+                        textDecoration = if (style.isUnderline) TextDecoration.Underline else TextDecoration.None,
+                        style = TextStyle(
+                            shadow = if (!hasDarkBox) Shadow(color = Color.Black, offset = Offset(2f, 2f), blurRadius = 4f) else null
+                        ),
+                        textAlign = when (activeCue.alignment) {
+                            SubtitleAlignment.BOTTOM_START, SubtitleAlignment.TOP_START, SubtitleAlignment.CENTER_START -> TextAlign.Start
+                            SubtitleAlignment.BOTTOM_END, SubtitleAlignment.TOP_END, SubtitleAlignment.CENTER_END -> TextAlign.End
+                            else -> TextAlign.Center
+                        }
+                    )
                 }
             }
         }
 
-        // 4. Video Resolution & Fullscreen Header
+        // 4. Top Quick Info & Fullscreen Toggle
         AnimatedVisibility(
             visible = showControls,
             enter = fadeIn(),
@@ -339,7 +304,7 @@ fun VideoPlayerView(
             modifier = Modifier
                 .align(Alignment.TopCenter)
                 .fillMaxWidth()
-                .padding(12.dp)
+                .padding(8.dp)
         ) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -347,18 +312,18 @@ fun VideoPlayerView(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Surface(
-                    shape = RoundedCornerShape(20.dp),
-                    color = Color.Black.copy(alpha = 0.65f),
+                    shape = RoundedCornerShape(12.dp),
+                    color = Color.Black.copy(alpha = 0.70f),
                     border = androidx.compose.foundation.BorderStroke(1.dp, Color.White.copy(alpha = 0.15f))
                 ) {
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
-                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp),
-                        horizontalArrangement = Arrangement.spacedBy(6.dp)
+                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp),
+                        horizontalArrangement = Arrangement.spacedBy(4.dp)
                     ) {
-                        Box(modifier = Modifier.size(6.dp).background(AccentEmerald, CircleShape))
+                        Box(modifier = Modifier.size(5.dp).background(AccentEmerald, CircleShape))
                         Text(
-                            text = "${playerState.videoWidth}x${playerState.videoHeight}",
+                            text = if (playerState.videoWidth > 0) "${playerState.videoWidth}x${playerState.videoHeight}" else "Preview",
                             color = Color.White,
                             fontSize = 10.sp,
                             fontWeight = FontWeight.Bold,
@@ -370,7 +335,7 @@ fun VideoPlayerView(
                 if (onToggleFullscreen != null) {
                     Surface(
                         shape = CircleShape,
-                        color = Color.Black.copy(alpha = 0.70f),
+                        color = Color.Black.copy(alpha = 0.75f),
                         border = androidx.compose.foundation.BorderStroke(1.dp, Color.White.copy(alpha = 0.20f))
                     ) {
                         IconButton(
@@ -380,7 +345,7 @@ fun VideoPlayerView(
                             Icon(
                                 imageVector = StudioIcons.Fullscreen,
                                 contentDescription = "Enter Fullscreen",
-                                tint = Color.White,
+                                tint = ImmersivePrimary,
                                 modifier = Modifier.size(18.dp)
                             )
                         }
@@ -389,30 +354,30 @@ fun VideoPlayerView(
             }
         }
 
-        // 5. Floating Glass Playback Controller Pill
+        // 5. Clean, Accessible Playback Controller Bar at Bottom
         AnimatedVisibility(
             visible = showControls,
             enter = fadeIn(),
             exit = fadeOut(),
             modifier = Modifier
                 .align(Alignment.BottomCenter)
-                .padding(bottom = 10.dp)
+                .padding(bottom = 6.dp)
         ) {
             Surface(
-                shape = RoundedCornerShape(32.dp),
+                shape = RoundedCornerShape(24.dp),
                 color = Color.Black.copy(alpha = 0.85f),
-                border = androidx.compose.foundation.BorderStroke(1.dp, Color.White.copy(alpha = 0.20f)),
-                shadowElevation = 12.dp,
+                border = androidx.compose.foundation.BorderStroke(1.dp, Color.White.copy(alpha = 0.18f)),
+                shadowElevation = 8.dp,
                 modifier = Modifier.testTag("floating_playback_controls")
             ) {
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(6.dp),
-                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp)
+                    horizontalArrangement = Arrangement.spacedBy(4.dp),
+                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp)
                 ) {
-                    // Speed Selector Toggle
+                    // Speed Selector
                     Surface(
-                        shape = RoundedCornerShape(8.dp),
+                        shape = RoundedCornerShape(6.dp),
                         color = Color.White.copy(alpha = 0.12f),
                         modifier = Modifier.clickable {
                             val nextIdx = (speeds.indexOf(playerState.playbackSpeed) + 1) % speeds.size
@@ -422,13 +387,13 @@ fun VideoPlayerView(
                         Text(
                             text = "${playerState.playbackSpeed}x",
                             color = AccentCyan,
-                            fontSize = 11.sp,
+                            fontSize = 10.sp,
                             fontWeight = FontWeight.Bold,
-                            modifier = Modifier.padding(horizontal = 6.dp, vertical = 4.dp)
+                            modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
                         )
                     }
 
-                    // Mute / Unmute Toggle
+                    // Mute / Unmute
                     IconButton(
                         onClick = { playerController.toggleMute() },
                         modifier = Modifier.size(28.dp).testTag("mute_toggle_btn")
@@ -437,41 +402,36 @@ fun VideoPlayerView(
                             imageVector = if (playerState.isMuted) StudioIcons.VolumeOff else StudioIcons.VolumeUp,
                             contentDescription = if (playerState.isMuted) "Unmute" else "Mute",
                             tint = if (playerState.isMuted) AccentRose else Color.White.copy(alpha = 0.85f),
-                            modifier = Modifier.size(16.dp)
+                            modifier = Modifier.size(15.dp)
                         )
                     }
 
                     // Rewind 5s
                     IconButton(
                         onClick = { playerController.seekBy(-5000L) },
-                        modifier = Modifier.size(30.dp).testTag("rewind_5s_button")
+                        modifier = Modifier.size(28.dp).testTag("rewind_5s_button")
                     ) {
                         Icon(
                             imageVector = StudioIcons.Rewind,
                             contentDescription = "Rewind 5 Seconds",
-                            tint = Color.White.copy(alpha = 0.90f),
-                            modifier = Modifier.size(18.dp)
+                            tint = Color.White,
+                            modifier = Modifier.size(16.dp)
                         )
                     }
 
-                    // Previous Frame (33ms)
+                    // Prev Frame
                     IconButton(
                         onClick = { playerController.stepFrame(-1) },
-                        modifier = Modifier.size(26.dp).testTag("prev_frame_button")
+                        modifier = Modifier.size(24.dp).testTag("prev_frame_button")
                     ) {
-                        Text(
-                            text = "-1f",
-                            color = AccentCyan,
-                            fontSize = 11.sp,
-                            fontWeight = FontWeight.Bold
-                        )
+                        Text("-1f", color = AccentCyan, fontSize = 10.sp, fontWeight = FontWeight.Bold)
                     }
 
-                    // Main Play / Pause Circle
+                    // Primary Play / Pause Circle
                     Surface(
                         shape = CircleShape,
                         color = ImmersivePrimary,
-                        modifier = Modifier.size(40.dp)
+                        modifier = Modifier.size(34.dp)
                     ) {
                         IconButton(
                             onClick = { playerController.togglePlayPause() },
@@ -481,34 +441,29 @@ fun VideoPlayerView(
                                 imageVector = if (playerState.isPlaying) StudioIcons.Pause else StudioIcons.Play,
                                 contentDescription = if (playerState.isPlaying) "Pause Video" else "Play Video",
                                 tint = Color.Black,
-                                modifier = Modifier.size(20.dp)
+                                modifier = Modifier.size(18.dp)
                             )
                         }
                     }
 
-                    // Next Frame (33ms)
+                    // Next Frame
                     IconButton(
                         onClick = { playerController.stepFrame(1) },
-                        modifier = Modifier.size(26.dp).testTag("next_frame_button")
+                        modifier = Modifier.size(24.dp).testTag("next_frame_button")
                     ) {
-                        Text(
-                            text = "+1f",
-                            color = AccentCyan,
-                            fontSize = 11.sp,
-                            fontWeight = FontWeight.Bold
-                        )
+                        Text("+1f", color = AccentCyan, fontSize = 10.sp, fontWeight = FontWeight.Bold)
                     }
 
-                    // Fast Forward 5s
+                    // Forward 5s
                     IconButton(
                         onClick = { playerController.seekBy(5000L) },
-                        modifier = Modifier.size(30.dp).testTag("forward_5s_button")
+                        modifier = Modifier.size(28.dp).testTag("forward_5s_button")
                     ) {
                         Icon(
                             imageVector = StudioIcons.Forward,
                             contentDescription = "Forward 5 Seconds",
-                            tint = Color.White.copy(alpha = 0.90f),
-                            modifier = Modifier.size(18.dp)
+                            tint = Color.White,
+                            modifier = Modifier.size(16.dp)
                         )
                     }
 
@@ -520,24 +475,9 @@ fun VideoPlayerView(
                         Icon(
                             imageVector = StudioIcons.Refresh,
                             contentDescription = "Toggle Loop",
-                            tint = if (playerState.isLooping) ImmersivePrimary else Color.White.copy(alpha = 0.45f),
-                            modifier = Modifier.size(15.dp)
+                            tint = if (playerState.isLooping) ImmersivePrimary else Color.White.copy(alpha = 0.40f),
+                            modifier = Modifier.size(14.dp)
                         )
-                    }
-
-                    // Fullscreen Toggle in pill
-                    if (onToggleFullscreen != null) {
-                        IconButton(
-                            onClick = onToggleFullscreen,
-                            modifier = Modifier.size(28.dp).testTag("fullscreen_toggle_pill_btn")
-                        ) {
-                            Icon(
-                                imageVector = StudioIcons.Fullscreen,
-                                contentDescription = "Enter Fullscreen",
-                                tint = ImmersivePrimary,
-                                modifier = Modifier.size(17.dp)
-                            )
-                        }
                     }
                 }
             }
