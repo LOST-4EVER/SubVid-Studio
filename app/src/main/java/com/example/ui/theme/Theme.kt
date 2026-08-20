@@ -1,14 +1,14 @@
 package com.example.ui.theme
 
-import android.os.Build
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Shapes
 import androidx.compose.material3.darkColorScheme
-import androidx.compose.material3.dynamicDarkColorScheme
-import androidx.compose.material3.dynamicLightColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.platform.LocalContext
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.unit.dp
 
 private val DarkColorScheme =
   darkColorScheme(
@@ -31,7 +31,29 @@ private val DarkColorScheme =
     outline = ImmersiveBorderFocused
   )
 
-private val LightColorScheme = DarkColorScheme
+private val LightColorScheme =
+  lightColorScheme(
+    primary = Color(0xFF276B64),
+    onPrimary = Color.White,
+    primaryContainer = Color(0xFFB8EEE5),
+    onPrimaryContainer = Color(0xFF06201D),
+    secondary = Color(0xFF526170),
+    onSecondary = Color.White,
+    background = Color(0xFFF7F9FA),
+    onBackground = Color(0xFF161A1E),
+    surface = Color(0xFFF7F9FA),
+    onSurface = Color(0xFF161A1E),
+    surfaceVariant = Color(0xFFE2E8EC),
+    onSurfaceVariant = Color(0xFF414B54)
+  )
+
+private val StudioShapes = Shapes(
+  extraSmall = RoundedCornerShape(6.dp),
+  small = RoundedCornerShape(10.dp),
+  medium = RoundedCornerShape(14.dp),
+  large = RoundedCornerShape(20.dp),
+  extraLarge = RoundedCornerShape(28.dp)
+)
 
 @Composable
 fun SubVidStudioTheme(
@@ -39,7 +61,17 @@ fun SubVidStudioTheme(
   dynamicColor: Boolean = false,
   content: @Composable () -> Unit,
 ) {
-  MaterialTheme(colorScheme = DarkColorScheme, typography = Typography, content = content)
+  val colors = when {
+    darkTheme -> DarkColorScheme
+    dynamicColor -> LightColorScheme
+    else -> LightColorScheme
+  }
+  MaterialTheme(
+    colorScheme = colors,
+    typography = Typography,
+    shapes = StudioShapes,
+    content = content
+  )
 }
 
 @Composable
@@ -48,6 +80,10 @@ fun MyApplicationTheme(
   dynamicColor: Boolean = true,
   content: @Composable () -> Unit,
 ) {
-  SubVidStudioTheme(content = content)
+  SubVidStudioTheme(
+    darkTheme = darkTheme,
+    dynamicColor = dynamicColor,
+    content = content
+  )
 }
 
