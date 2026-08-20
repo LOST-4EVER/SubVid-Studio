@@ -7,6 +7,10 @@ on:
       - master
     tags:
       - 'v*'
+  pull_request:
+    branches:
+      - main
+      - master
   workflow_dispatch:
 
 concurrency:
@@ -14,8 +18,37 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  test:
+    name: Run Unit Tests
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Source Code
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: "8.11.1"
+
+      - name: Ensure Environment Files Exist
+        run: |
+          touch .env.example
+          touch .env
+
+      - name: Run Unit Tests
+        run: gradle testDebugUnitTest --no-daemon
+
   build:
     name: Build & Publish Release
+    needs: test
+    if: github.event_name != 'pull_request'
     runs-on: ubuntu-latest
 
     permissions:
@@ -25,19 +58,27 @@ jobs:
       - name: Checkout Source Code
         uses: actions/checkout@v4
 
-      - name: Use JDK 17 (pre-installed on runner)
-        shell: bash
-        run: |
-          echo "JAVA_HOME=$JAVA_HOME_17_X64" >> "$GITHUB_ENV"
-          echo "$JAVA_HOME_17_X64/bin" >> "$GITHUB_PATH"
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'temurin'
 
-      - name: Set up Gradle 9.3.1 with dependency caching
+      - name: Set up Gradle
         uses: gradle/actions/setup-gradle@v4
         with:
-          gradle-version: "9.3.1"
+          gradle-version: "8.11.1"
 
-      - name: Decode or Generate Signing Keystore
+      - name: Ensure Environment and Keystores Exist
         run: |
+          touch .env.example
+          touch .env
+
+          if [ ! -f "debug.keystore" ]; then
+            echo "Generating debug keystore..."
+            keytool -genkey -v -keystore debug.keystore -alias androiddebugkey -keyalg RSA -keysize 2048 -validity 10000 -storepass android -keypass android -dname "CN=Android Debug, OU=Android, O=Google, L=Mountain View, S=CA, C=US"
+          fi
+
           if [ -n "${{ secrets.KEYSTORE_BASE64 }}" ]; then
             echo "Decoding release keystore from GitHub Secret..."
             echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 -d > release.keystore
@@ -57,8 +98,15 @@ jobs:
       - name: Organize APK Artifacts
         run: |
           mkdir -p release_apks
-          cp app/build/outputs/apk/debug/app-debug.apk release_apks/SubVidStudio-debug.apk
-          cp app/build/outputs/apk/release/app-release.apk release_apks/SubVidStudio-release.apk
+          if [ -f "app/build/outputs/apk/debug/app-debug.apk" ]; then
+            cp app/build/outputs/apk/debug/app-debug.apk release_apks/SubVidStudio-debug.apk
+          fi
+          if [ -f "app/build/outputs/apk/release/app-release.apk" ]; then
+            cp app/build/outputs/apk/release/app-release.apk release_apks/SubVidStudio-release.apk
+          elif [ -f "app/build/outputs/apk/release/app-release-unsigned.apk" ]; then
+            cp app/build/outputs/apk/release/app-release-unsigned.apk release_apks/SubVidStudio-release.apk
+          fi
+          ls -la release_apks/
 
       - name: Upload APKs as Workflow Artifacts
         uses: actions/upload-artifact@v4
@@ -71,7 +119,11 @@ jobs:
         if: startsWith(github.ref, 'refs/tags/') || github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master'
         with:
           tag_name: ${{ startsWith(github.ref, 'refs/tags/') && github.ref_name || 'latest' }}
-          name: SubVid Studio Release ${{ startsWith(github.ref, 'refs/tags/') && github.ref_name || 'latest' }}
+          target_commitish: ${{ github.sha }}
+          name: SubVid Studio ${{ startsWith(github.ref, 'refs/tags/') && github.ref_name || 'Latest Build' }}
+          make_latest: "true"
+          generate_release_notes: true
+          fail_on_unmatched_files: false
           body: |
             ## SubVid Studio Automated Release
 
