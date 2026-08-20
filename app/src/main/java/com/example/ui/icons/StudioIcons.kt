@@ -336,4 +336,136 @@ object StudioIcons {
     val VolumeUp: ImageVector = Icons.AutoMirrored.Filled.VolumeUp
     val VolumeOff: ImageVector = Icons.AutoMirrored.Filled.VolumeOff
     val AudioTrack: ImageVector = Icons.Filled.Audiotrack
+
+    // Custom Vector SVG: Fullscreen Enter
+    val Fullscreen: ImageVector = ImageVector.Builder(
+        name = "StudioFullscreen",
+        defaultWidth = 24.dp,
+        defaultHeight = 24.dp,
+        viewportWidth = 24f,
+        viewportHeight = 24f
+    ).path(
+        fill = SolidColor(Color.White)
+    ) {
+        moveTo(7f, 14f)
+        lineTo(5f, 14f)
+        lineTo(5f, 19f)
+        lineTo(10f, 19f)
+        lineTo(10f, 17f)
+        lineTo(7f, 17f)
+        lineTo(7f, 14f)
+        close()
+        moveTo(5f, 10f)
+        lineTo(7f, 10f)
+        lineTo(7f, 7f)
+        lineTo(10f, 7f)
+        lineTo(10f, 5f)
+        lineTo(5f, 5f)
+        lineTo(5f, 10f)
+        close()
+        moveTo(17f, 17f)
+        lineTo(14f, 17f)
+        lineTo(14f, 19f)
+        lineTo(19f, 19f)
+        lineTo(19f, 14f)
+        lineTo(17f, 14f)
+        lineTo(17f, 17f)
+        close()
+        moveTo(14f, 5f)
+        lineTo(14f, 7f)
+        lineTo(17f, 7f)
+        lineTo(17f, 10f)
+        lineTo(19f, 10f)
+        lineTo(19f, 5f)
+        lineTo(14f, 5f)
+        close()
+    }.build()
+
+    // Custom Vector SVG: Fullscreen Exit
+    val FullscreenExit: ImageVector = ImageVector.Builder(
+        name = "StudioFullscreenExit",
+        defaultWidth = 24.dp,
+        defaultHeight = 24.dp,
+        viewportWidth = 24f,
+        viewportHeight = 24f
+    ).path(
+        fill = SolidColor(Color.White)
+    ) {
+        moveTo(5f, 16f)
+        lineTo(8f, 16f)
+        lineTo(8f, 19f)
+        lineTo(10f, 19f)
+        lineTo(10f, 14f)
+        lineTo(5f, 14f)
+        lineTo(5f, 16f)
+        close()
+        moveTo(8f, 8f)
+        lineTo(5f, 8f)
+        lineTo(5f, 10f)
+        lineTo(10f, 10f)
+        lineTo(10f, 5f)
+        lineTo(8f, 5f)
+        lineTo(8f, 8f)
+        close()
+        moveTo(14f, 19f)
+        lineTo(16f, 19f)
+        lineTo(16f, 16f)
+        lineTo(19f, 16f)
+        lineTo(19f, 14f)
+        lineTo(14f, 14f)
+        lineTo(14f, 19f)
+        close()
+        moveTo(16f, 8f)
+        lineTo(14f, 8f)
+        lineTo(14f, 10f)
+        lineTo(19f, 10f)
+        lineTo(19f, 5f)
+        lineTo(16f, 5f)
+        lineTo(16f, 8f)
+        close()
+    }.build()
+
+    // Custom Vector SVG: Aspect Ratio Mode
+    val AspectRatio: ImageVector = ImageVector.Builder(
+        name = "StudioAspectRatio",
+        defaultWidth = 24.dp,
+        defaultHeight = 24.dp,
+        viewportWidth = 24f,
+        viewportHeight = 24f
+    ).path(
+        fill = SolidColor(Color.White)
+    ) {
+        moveTo(19f, 12f)
+        lineTo(17f, 12f)
+        lineTo(17f, 15f)
+        lineTo(14f, 15f)
+        lineTo(14f, 17f)
+        lineTo(19f, 17f)
+        lineTo(19f, 12f)
+        close()
+        moveTo(7f, 9f)
+        lineTo(10f, 9f)
+        lineTo(10f, 7f)
+        lineTo(5f, 7f)
+        lineTo(5f, 12f)
+        lineTo(7f, 12f)
+        lineTo(7f, 9f)
+        close()
+        moveTo(21f, 3f)
+        lineTo(3f, 3f)
+        curveTo(1.9f, 3f, 1f, 3.9f, 1f, 5f)
+        lineTo(1f, 19f)
+        curveTo(1f, 20.1f, 1.9f, 21f, 3f, 21f)
+        lineTo(21f, 21f)
+        curveTo(22.1f, 21f, 23f, 20.1f, 23f, 19f)
+        lineTo(23f, 5f)
+        curveTo(23f, 3.9f, 22.1f, 3f, 21f, 3f)
+        close()
+        moveTo(21f, 19f)
+        lineTo(3f, 19f)
+        lineTo(3f, 5f)
+        lineTo(21f, 5f)
+        lineTo(21f, 19f)
+        close()
+    }.build()
 }

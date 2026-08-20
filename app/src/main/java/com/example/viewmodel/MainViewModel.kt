@@ -99,6 +99,9 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     private val _showSubtitleListSheet = MutableStateFlow(false)
     val showSubtitleListSheet: StateFlow<Boolean> = _showSubtitleListSheet.asStateFlow()
 
+    private val _isFullscreenVideo = MutableStateFlow(false)
+    val isFullscreenVideo: StateFlow<Boolean> = _isFullscreenVideo.asStateFlow()
+
     private val _toastMessage = MutableStateFlow<String?>(null)
     val toastMessage: StateFlow<String?> = _toastMessage.asStateFlow()
 
@@ -143,6 +146,14 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     fun setTab(tab: AppTab) {
         _currentTab.value = tab
+    }
+
+    fun setFullscreenVideo(isFullscreen: Boolean) {
+        _isFullscreenVideo.value = isFullscreen
+    }
+
+    fun toggleFullscreenVideo() {
+        _isFullscreenVideo.value = !_isFullscreenVideo.value
     }
 
     fun clearToastMessage() {

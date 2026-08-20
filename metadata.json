@@ -1,6 +1,6 @@
 {
   "name": "SubVid Studio",
-  "description": "Professional video subtitle loader, timeline editor, text placement customizer, and high-quality MP4/MKV exporter.",
+  "description": "High-performance video subtitle editor, timeline synchronizer, interactive drag-and-drop caption positioner, full-screen playback studio, and hardware-accelerated MP4/MKV burn-in exporter for Android.",
   "requestFramePermissions": [],
   "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
 }

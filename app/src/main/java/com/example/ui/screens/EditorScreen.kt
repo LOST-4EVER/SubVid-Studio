@@ -46,6 +46,7 @@ import com.example.ui.components.EditorCueInspector
 import com.example.ui.components.EditorMediaHeader
 import com.example.ui.components.EditorToolbeltStrip
 import com.example.ui.components.ExportDialog
+import com.example.ui.components.FullScreenVideoPlayerView
 import com.example.ui.components.SubtitleListSheet
 import com.example.ui.components.SubtitlePlacementDialog
 import com.example.ui.components.SubtitleStyleDialog
@@ -79,6 +80,7 @@ fun EditorScreen(
     val showStyleDialog by viewModel.showStyleDialog.collectAsState()
     val showExportDialog by viewModel.showExportDialog.collectAsState()
     val showSubtitleListSheet by viewModel.showSubtitleListSheet.collectAsState()
+    val isFullscreenVideo by viewModel.isFullscreenVideo.collectAsState()
 
     var pendingExportFormat by remember { mutableStateOf(SubtitleFormat.SRT) }
 
@@ -107,148 +109,171 @@ fun EditorScreen(
         uri?.let { viewModel.exportSubtitleToFile(it, pendingExportFormat) }
     }
 
-    Column(
-        modifier = modifier
-            .fillMaxSize()
-            .background(ImmersiveBg)
-            .padding(horizontal = 12.dp, vertical = 8.dp)
-            .verticalScroll(rememberScrollState()),
-        verticalArrangement = Arrangement.spacedBy(10.dp)
-    ) {
-        // 1. Modular Studio Header with Quick Media Actions
-        EditorMediaHeader(
-            videoFileName = videoMetadata.fileName,
-            hasVideoLoaded = videoMetadata.uriString.isNotEmpty(),
+    if (isFullscreenVideo && videoMetadata.uriString.isNotEmpty()) {
+        FullScreenVideoPlayerView(
+            playerController = viewModel.playerController,
+            playerState = playerState,
+            videoMetadata = videoMetadata,
             subtitleTrack = subtitleTrack,
-            onLoadVideoClick = { videoPickerLauncher.launch("video/*") },
-            onUnloadVideoClick = { viewModel.unloadVideo() },
-            onLoadSubtitleClick = { subtitlePickerLauncher.launch("*/*") },
-            onCreateNewSubtitleTrack = { viewModel.createNewSubtitleTrack() },
-            onSaveSubtitleTrack = { format ->
-                pendingExportFormat = format
-                val ext = format.extension
-                saveSubtitleLauncher.launch("${subtitleTrack.title.ifEmpty { "subtitles" }}.$ext")
+            activeCue = activeCue ?: selectedCue,
+            onSubtitlePositionChanged = { newX, newY ->
+                viewModel.updateSubtitlePosition(newX, newY)
             },
-            onUnloadSubtitleTrack = { viewModel.unloadSubtitleTrack() }
+            onOpenStyleDialog = { viewModel.setShowStyleDialog(true) },
+            onOpenPlacementDialog = { viewModel.setShowPlacementDialog(true) },
+            onOpenSubtitleList = { viewModel.setShowSubtitleListSheet(true) },
+            onExitFullscreen = { viewModel.setFullscreenVideo(false) }
         )
+    } else {
+        Column(
+            modifier = modifier
+                .fillMaxSize()
+                .background(ImmersiveBg)
+                .padding(horizontal = 12.dp, vertical = 8.dp)
+                .verticalScroll(rememberScrollState()),
+            verticalArrangement = Arrangement.spacedBy(10.dp)
+        ) {
+            // 1. Modular Studio Header with Quick Media Actions
+            EditorMediaHeader(
+                videoFileName = videoMetadata.fileName,
+                hasVideoLoaded = videoMetadata.uriString.isNotEmpty(),
+                subtitleTrack = subtitleTrack,
+                onLoadVideoClick = { videoPickerLauncher.launch("video/*") },
+                onUnloadVideoClick = { viewModel.unloadVideo() },
+                onLoadSubtitleClick = { subtitlePickerLauncher.launch("*/*") },
+                onCreateNewSubtitleTrack = { viewModel.createNewSubtitleTrack() },
+                onSaveSubtitleTrack = { format ->
+                    pendingExportFormat = format
+                    val ext = format.extension
+                    saveSubtitleLauncher.launch("${subtitleTrack.title.ifEmpty { "subtitles" }}.$ext")
+                },
+                onUnloadSubtitleTrack = { viewModel.unloadSubtitleTrack() }
+            )
 
-        // 2. Video Viewport Canvas OR Empty Video Placeholder Card
-        if (videoMetadata.uriString.isEmpty()) {
-            Card(
-                shape = RoundedCornerShape(16.dp),
-                colors = CardDefaults.cardColors(containerColor = ImmersiveSurface),
-                border = androidx.compose.foundation.BorderStroke(1.dp, ImmersiveCardBorder),
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(200.dp)
-            ) {
-                Column(
+            // 2. Video Viewport Canvas OR Empty Video Placeholder Card
+            if (videoMetadata.uriString.isEmpty()) {
+                Card(
+                    shape = RoundedCornerShape(16.dp),
+                    colors = CardDefaults.cardColors(containerColor = ImmersiveSurface),
+                    border = androidx.compose.foundation.BorderStroke(1.dp, ImmersiveCardBorder),
                     modifier = Modifier
-                        .fillMaxSize()
-                        .padding(16.dp),
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    verticalArrangement = Arrangement.Center
+                        .fillMaxWidth()
+                        .height(200.dp)
                 ) {
-                    Box(
+                    Column(
                         modifier = Modifier
-                            .size(44.dp)
-                            .clip(CircleShape)
-                            .background(ImmersiveActionBg),
-                        contentAlignment = Alignment.Center
+                            .fillMaxSize()
+                            .padding(16.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.Center
                     ) {
-                        Icon(StudioIcons.Video, contentDescription = null, tint = ImmersivePrimary, modifier = Modifier.size(24.dp))
-                    }
+                        Box(
+                            modifier = Modifier
+                                .size(44.dp)
+                                .clip(CircleShape)
+                                .background(ImmersiveActionBg),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(StudioIcons.Video, contentDescription = null, tint = ImmersivePrimary, modifier = Modifier.size(24.dp))
+                        }
 
-                    Spacer(Modifier.height(8.dp))
+                        Spacer(Modifier.height(8.dp))
 
-                    Text(
-                        text = "Add your video file to start editing",
-                        color = ImmersiveTextPrimary,
-                        fontSize = 13.sp,
-                        fontWeight = FontWeight.Bold
-                    )
+                        Text(
+                            text = "Add your video file to start editing",
+                            color = ImmersiveTextPrimary,
+                            fontSize = 13.sp,
+                            fontWeight = FontWeight.Bold
+                        )
 
-                    Text(
-                        text = "Supports MP4, MKV, WebM, MOV, and AVI formats",
-                        color = ImmersiveTextSecondary,
-                        fontSize = 10.sp
-                    )
+                        Text(
+                            text = "Supports MP4, MKV, WebM, MOV, and AVI formats",
+                            color = ImmersiveTextSecondary,
+                            fontSize = 10.sp
+                        )
 
-                    Spacer(Modifier.height(10.dp))
+                        Spacer(Modifier.height(10.dp))
 
-                    Button(
-                        onClick = { videoPickerLauncher.launch("video/*") },
-                        colors = ButtonDefaults.buttonColors(containerColor = ImmersivePrimary),
-                        shape = RoundedCornerShape(8.dp),
-                        contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 14.dp, vertical = 6.dp)
-                    ) {
-                        Icon(StudioIcons.Import, contentDescription = null, tint = Color.Black, modifier = Modifier.size(14.dp))
-                        Spacer(Modifier.width(6.dp))
-                        Text("Add Video File", color = Color.Black, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                        Button(
+                            onClick = { videoPickerLauncher.launch("video/*") },
+                            colors = ButtonDefaults.buttonColors(containerColor = ImmersivePrimary),
+                            shape = RoundedCornerShape(8.dp),
+                            contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 14.dp, vertical = 6.dp)
+                        ) {
+                            Icon(StudioIcons.Import, contentDescription = null, tint = Color.Black, modifier = Modifier.size(14.dp))
+                            Spacer(Modifier.width(6.dp))
+                            Text("Add Video File", color = Color.Black, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                        }
                     }
                 }
+            } else {
+                // Live Video Player Canvas with Interactive Drag Overlay
+                VideoPlayerView(
+                    playerController = viewModel.playerController,
+                    playerState = playerState,
+                    activeCue = activeCue ?: selectedCue,
+                    isDraggingSubtitle = false,
+                    onSubtitlePositionChanged = { newX, newY ->
+                        viewModel.updateSubtitlePosition(newX, newY)
+                    },
+                    onSubtitleTapped = {
+                        viewModel.setShowPlacementDialog(true)
+                    },
+                    onToggleFullscreen = {
+                        viewModel.setFullscreenVideo(true)
+                    },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(220.dp)
+                )
             }
-        } else {
-            // Live Video Player Canvas with Interactive Drag Overlay
-            VideoPlayerView(
-                playerController = viewModel.playerController,
-                playerState = playerState,
-                activeCue = activeCue ?: selectedCue,
-                isDraggingSubtitle = false,
-                onSubtitlePositionChanged = { newX, newY ->
-                    viewModel.updateSubtitlePosition(newX, newY)
-                },
-                onSubtitleTapped = {
-                    viewModel.setShowPlacementDialog(true)
-                },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(220.dp)
+
+            // 3. Pro Multi-Track Waveform & Timeline Scrubber
+            TimelineScrubberView(
+                currentPositionMs = playerState.currentPositionMs,
+                durationMs = playerState.durationMs,
+                subtitleTrack = subtitleTrack,
+                selectedCue = selectedCue,
+                onSeek = { ms -> viewModel.playerController.seekTo(ms) },
+                onSelectCue = { cue -> viewModel.selectCue(cue) },
+                onAddCueAtCurrentPosition = { viewModel.addCueAtCurrentPosition() },
+                onSplitCueAtCurrentPosition = { viewModel.splitCueAtCurrentPosition() },
+                onDeleteSelectedCue = { viewModel.deleteSelectedCue() },
+                onNudgeTiming = { dStart, dEnd -> viewModel.nudgeTiming(dStart, dEnd) },
+                onSetCueStartTime = { cue, newStart -> viewModel.setCueStartTime(cue, newStart) },
+                onSetCueEndTime = { cue, newEnd -> viewModel.setCueEndTime(cue, newEnd) },
+                onShiftCueTiming = { cue, delta -> viewModel.shiftCueTiming(cue, delta) }
             )
-        }
 
-        // 3. Pro Multi-Track Waveform & Timeline Scrubber
-        TimelineScrubberView(
-            currentPositionMs = playerState.currentPositionMs,
-            durationMs = playerState.durationMs,
-            subtitleTrack = subtitleTrack,
-            selectedCue = selectedCue,
-            onSeek = { ms -> viewModel.playerController.seekTo(ms) },
-            onSelectCue = { cue -> viewModel.selectCue(cue) },
-            onAddCueAtCurrentPosition = { viewModel.addCueAtCurrentPosition() },
-            onSplitCueAtCurrentPosition = { viewModel.splitCueAtCurrentPosition() },
-            onDeleteSelectedCue = { viewModel.deleteSelectedCue() },
-            onNudgeTiming = { dStart, dEnd -> viewModel.nudgeTiming(dStart, dEnd) },
-            onSetCueStartTime = { cue, newStart -> viewModel.setCueStartTime(cue, newStart) },
-            onSetCueEndTime = { cue, newEnd -> viewModel.setCueEndTime(cue, newEnd) },
-            onShiftCueTiming = { cue, delta -> viewModel.shiftCueTiming(cue, delta) }
-        )
+            // 4. Live Selected Cue Inspector Component
+            val currentSelected = selectedCue ?: activeCue
+            if (currentSelected != null) {
+                val currentIdx = subtitleTrack.cues.indexOfFirst { it.id == currentSelected.id }
+                EditorCueInspector(
+                    selectedCue = currentSelected,
+                    totalCuesCount = subtitleTrack.cues.size,
+                    currentCueIndex = currentIdx,
+                    onSelectPreviousCue = { viewModel.selectPreviousCue() },
+                    onSelectNextCue = { viewModel.selectNextCue() },
+                    onDuplicateCue = { viewModel.duplicateSelectedCue() },
+                    onUpdateCueText = { cue, text -> viewModel.updateCueText(cue, text) }
+                )
+            }
 
-        // 4. Live Selected Cue Inspector Component
-        val currentSelected = selectedCue ?: activeCue
-        if (currentSelected != null) {
-            val currentIdx = subtitleTrack.cues.indexOfFirst { it.id == currentSelected.id }
-            EditorCueInspector(
-                selectedCue = currentSelected,
-                totalCuesCount = subtitleTrack.cues.size,
-                currentCueIndex = currentIdx,
-                onSelectPreviousCue = { viewModel.selectPreviousCue() },
-                onSelectNextCue = { viewModel.selectNextCue() },
-                onDuplicateCue = { viewModel.duplicateSelectedCue() },
-                onUpdateCueText = { cue, text -> viewModel.updateCueText(cue, text) }
+            // 5. Studio Action Strip / Toolbelt Component
+            EditorToolbeltStrip(
+                onPlacementClick = { viewModel.setShowPlacementDialog(true) },
+                onStyleClick = { viewModel.setShowStyleDialog(true) },
+                onSubtitlesListClick = { viewModel.setShowSubtitleListSheet(true) },
+                onExportClick = { viewModel.setShowExportDialog(true) },
+                onFullscreenClick = if (videoMetadata.uriString.isNotEmpty()) {
+                    { viewModel.setFullscreenVideo(true) }
+                } else null
             )
+
+            // Bottom spacing for navigation bar
+            Spacer(Modifier.height(60.dp))
         }
-
-        // 5. Studio Action Strip / Toolbelt Component
-        EditorToolbeltStrip(
-            onPlacementClick = { viewModel.setShowPlacementDialog(true) },
-            onStyleClick = { viewModel.setShowStyleDialog(true) },
-            onSubtitlesListClick = { viewModel.setShowSubtitleListSheet(true) },
-            onExportClick = { viewModel.setShowExportDialog(true) }
-        )
-
-        // Bottom spacing for navigation bar
-        Spacer(Modifier.height(60.dp))
     }
 
     // Modal Dialogs

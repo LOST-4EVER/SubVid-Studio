@@ -114,29 +114,47 @@ jobs:
           name: subvid-studio-apks
           path: release_apks/*
 
+      - name: Generate Dynamic Release Tag & Name
+        id: release_info
+        run: |
+          BUILD_NUM="${{ github.run_number }}"
+          SHORT_SHA="$(echo ${{ github.sha }} | cut -c1-7)"
+          TIMESTAMP="$(date +'%Y-%m-%d %H:%M UTC')"
+          TAG_DATE="$(date +'%Y%m%d-%H%M%S')"
+          if [[ "${{ github.ref }}" == refs/tags/v* ]]; then
+            TAG_NAME="${{ github.ref_name }}"
+            RELEASE_NAME="SubVid Studio ${TAG_NAME}"
+          else
+            TAG_NAME="v1.1.0-build.${BUILD_NUM}-${TAG_DATE}"
+            RELEASE_NAME="SubVid Studio v1.1.0 (Build #${BUILD_NUM} • ${TIMESTAMP})"
+          fi
+          echo "tag_name=${TAG_NAME}" >> $GITHUB_OUTPUT
+          echo "release_name=${RELEASE_NAME}" >> $GITHUB_OUTPUT
+
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
-        if: startsWith(github.ref, 'refs/tags/') || github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master'
+        if: startsWith(github.ref, 'refs/tags/') || github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master' || github.event_name == 'workflow_dispatch'
         with:
-          tag_name: ${{ startsWith(github.ref, 'refs/tags/') && github.ref_name || 'latest' }}
+          tag_name: ${{ steps.release_info.outputs.tag_name }}
           target_commitish: ${{ github.sha }}
-          name: SubVid Studio ${{ startsWith(github.ref, 'refs/tags/') && github.ref_name || 'Latest Build' }}
+          name: ${{ steps.release_info.outputs.release_name }}
           make_latest: "true"
           generate_release_notes: true
           fail_on_unmatched_files: false
           body: |
-            ## SubVid Studio Automated Release
+            ## ${{ steps.release_info.outputs.release_name }}
 
-            This release contains the latest automated builds of SubVid Studio:
-            - **SubVidStudio-release.apk** (Signed Release Build)
-            - **SubVidStudio-debug.apk** (Debug Build with Logging)
+            This automated release delivers the latest high-performance build of **SubVid Studio**:
+            - 📦 **SubVidStudio-release.apk** (Signed Release Build, R8 Minified & Resource Optimized)
+            - 🛠️ **SubVidStudio-debug.apk** (Debug Build with Logcat Instrumentation)
 
-            ### Included Capabilities:
-            - Multitrack Canvas timeline scrubbing
-            - Interactive drag-and-drop subtitle positioning
-            - SRT, VTT, and ASS/SSA subtitle parsing and export
-            - Hardware-accelerated MediaCodec video export and soft-muxing
-            - Multi-threaded CPU/GPU batch processing hub
+            ### Key Highlights & Features:
+            - 📺 **Fullscreen Live Video Playback & Editing**: Seamless full-screen mode with interactive subtitle positioning and gesture controls.
+            - ⚡ **Multi-track Canvas Timeline**: Hardware-accelerated 60 FPS scrubber with millisecond precision and micro-nudging (±0.1s / ±0.5s).
+            - 🔤 **Universal Subtitle Formats**: Complete parsing and export for SRT, WebVTT, and ASS/SSA with custom styles, tags, and position preservation.
+            - 🚀 **Hardware Video Acceleration**: Android MediaCodec & MediaMuxer encoder for lossless soft-muxing and high-bitrate hardcoded subtitle burn-in.
+            - 🧩 **CPU/GPU Batch Processing Hub**: Multi-threaded bulk format conversion, time shifting, and video encoding.
+            - 📱 **Universal Android Compatibility**: Optimized for Android 16 (API 36) down to Android 7.0 (API 24) across phones, foldables, and tablets.
           files: |
             release_apks/SubVidStudio-release.apk
             release_apks/SubVidStudio-debug.apk

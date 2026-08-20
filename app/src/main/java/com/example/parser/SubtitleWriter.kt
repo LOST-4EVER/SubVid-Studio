@@ -3,6 +3,7 @@ package com.example.parser
 import com.example.model.SubtitleCue
 import com.example.model.SubtitleFormat
 import com.example.model.SubtitleTrack
+import java.util.Locale
 
 object SubtitleWriter {
 
@@ -111,7 +112,7 @@ object SubtitleWriter {
         val s = totalSec % 60
         val m = (totalSec / 60) % 60
         val h = totalSec / 3600
-        return String.format("%02d:%02d:%02d,%03d", h, m, s, millis)
+        return String.format(Locale.US, "%02d:%02d:%02d,%03d", h, m, s, millis)
     }
 
     private fun formatVttTime(ms: Long): String {
@@ -120,7 +121,7 @@ object SubtitleWriter {
         val s = totalSec % 60
         val m = (totalSec / 60) % 60
         val h = totalSec / 3600
-        return String.format("%02d:%02d:%02d.%03d", h, m, s, millis)
+        return String.format(Locale.US, "%02d:%02d:%02d.%03d", h, m, s, millis)
     }
 
     private fun formatAssTime(ms: Long): String {
@@ -129,6 +130,6 @@ object SubtitleWriter {
         val s = totalSec % 60
         val m = (totalSec / 60) % 60
         val h = totalSec / 3600
-        return String.format("%d:%02d:%02d.%02d", h, m, s, centis)
+        return String.format(Locale.US, "%d:%02d:%02d.%02d", h, m, s, centis)
     }
 }

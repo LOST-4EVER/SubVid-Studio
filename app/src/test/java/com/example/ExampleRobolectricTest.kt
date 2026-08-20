@@ -36,4 +36,24 @@ class ExampleRobolectricTest {
         assertTrue(generated.contains("00:00:01,000 --> 00:00:04,000"))
         assertTrue(generated.contains("Hello, SubVid Studio!"))
     }
+
+    @Test
+    fun `parse and generate WebVTT subtitles`() {
+        val vttContent = """
+            WEBVTT
+
+            00:00:02.000 --> 00:00:05.500
+            SubVid Studio WebVTT support
+        """.trimIndent()
+
+        val track = SubtitleParser.parseString(vttContent, "test.vtt")
+        assertEquals(1, track.cues.size)
+        assertEquals(2000L, track.cues[0].startTimeMs)
+        assertEquals(5500L, track.cues[0].endTimeMs)
+        assertEquals("SubVid Studio WebVTT support", track.cues[0].text)
+
+        val generated = SubtitleWriter.generate(track, SubtitleFormat.VTT)
+        assertTrue(generated.contains("WEBVTT"))
+        assertTrue(generated.contains("00:00:02.000 --> 00:00:05.500"))
+    }
 }

@@ -86,7 +86,8 @@ fun VideoPlayerView(
     isDraggingSubtitle: Boolean,
     onSubtitlePositionChanged: (Float, Float) -> Unit,
     onSubtitleTapped: () -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    onToggleFullscreen: (() -> Unit)? = null
 ) {
     var showControls by remember { mutableStateOf(true) }
     var isUserDragging by remember { mutableStateOf(false) }
@@ -330,33 +331,60 @@ fun VideoPlayerView(
             }
         }
 
-        // 4. Video Resolution & Timecode Badge (Top Header inside player)
+        // 4. Video Resolution & Fullscreen Header
         AnimatedVisibility(
             visible = showControls,
             enter = fadeIn(),
             exit = fadeOut(),
             modifier = Modifier
-                .align(Alignment.TopStart)
+                .align(Alignment.TopCenter)
+                .fillMaxWidth()
                 .padding(12.dp)
         ) {
-            Surface(
-                shape = RoundedCornerShape(20.dp),
-                color = Color.Black.copy(alpha = 0.65f),
-                border = androidx.compose.foundation.BorderStroke(1.dp, Color.White.copy(alpha = 0.15f))
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
             ) {
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp),
-                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                Surface(
+                    shape = RoundedCornerShape(20.dp),
+                    color = Color.Black.copy(alpha = 0.65f),
+                    border = androidx.compose.foundation.BorderStroke(1.dp, Color.White.copy(alpha = 0.15f))
                 ) {
-                    Box(modifier = Modifier.size(6.dp).background(AccentEmerald, CircleShape))
-                    Text(
-                        text = "${playerState.videoWidth}x${playerState.videoHeight}",
-                        color = Color.White,
-                        fontSize = 10.sp,
-                        fontWeight = FontWeight.Bold,
-                        fontFamily = FontFamily.Monospace
-                    )
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp),
+                        horizontalArrangement = Arrangement.spacedBy(6.dp)
+                    ) {
+                        Box(modifier = Modifier.size(6.dp).background(AccentEmerald, CircleShape))
+                        Text(
+                            text = "${playerState.videoWidth}x${playerState.videoHeight}",
+                            color = Color.White,
+                            fontSize = 10.sp,
+                            fontWeight = FontWeight.Bold,
+                            fontFamily = FontFamily.Monospace
+                        )
+                    }
+                }
+
+                if (onToggleFullscreen != null) {
+                    Surface(
+                        shape = CircleShape,
+                        color = Color.Black.copy(alpha = 0.70f),
+                        border = androidx.compose.foundation.BorderStroke(1.dp, Color.White.copy(alpha = 0.20f))
+                    ) {
+                        IconButton(
+                            onClick = onToggleFullscreen,
+                            modifier = Modifier.size(32.dp).testTag("fullscreen_toggle_top_btn")
+                        ) {
+                            Icon(
+                                imageVector = StudioIcons.Fullscreen,
+                                contentDescription = "Enter Fullscreen",
+                                tint = Color.White,
+                                modifier = Modifier.size(18.dp)
+                            )
+                        }
+                    }
                 }
             }
         }
@@ -379,8 +407,8 @@ fun VideoPlayerView(
             ) {
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                    modifier = Modifier.padding(horizontal = 14.dp, vertical = 6.dp)
+                    horizontalArrangement = Arrangement.spacedBy(6.dp),
+                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp)
                 ) {
                     // Speed Selector Toggle
                     Surface(
@@ -403,7 +431,7 @@ fun VideoPlayerView(
                     // Mute / Unmute Toggle
                     IconButton(
                         onClick = { playerController.toggleMute() },
-                        modifier = Modifier.size(30.dp).testTag("mute_toggle_btn")
+                        modifier = Modifier.size(28.dp).testTag("mute_toggle_btn")
                     ) {
                         Icon(
                             imageVector = if (playerState.isMuted) StudioIcons.VolumeOff else StudioIcons.VolumeUp,
@@ -416,7 +444,7 @@ fun VideoPlayerView(
                     // Rewind 5s
                     IconButton(
                         onClick = { playerController.seekBy(-5000L) },
-                        modifier = Modifier.size(32.dp).testTag("rewind_5s_button")
+                        modifier = Modifier.size(30.dp).testTag("rewind_5s_button")
                     ) {
                         Icon(
                             imageVector = StudioIcons.Rewind,
@@ -429,7 +457,7 @@ fun VideoPlayerView(
                     // Previous Frame (33ms)
                     IconButton(
                         onClick = { playerController.stepFrame(-1) },
-                        modifier = Modifier.size(28.dp).testTag("prev_frame_button")
+                        modifier = Modifier.size(26.dp).testTag("prev_frame_button")
                     ) {
                         Text(
                             text = "-1f",
@@ -443,7 +471,7 @@ fun VideoPlayerView(
                     Surface(
                         shape = CircleShape,
                         color = ImmersivePrimary,
-                        modifier = Modifier.size(42.dp)
+                        modifier = Modifier.size(40.dp)
                     ) {
                         IconButton(
                             onClick = { playerController.togglePlayPause() },
@@ -453,7 +481,7 @@ fun VideoPlayerView(
                                 imageVector = if (playerState.isPlaying) StudioIcons.Pause else StudioIcons.Play,
                                 contentDescription = if (playerState.isPlaying) "Pause Video" else "Play Video",
                                 tint = Color.Black,
-                                modifier = Modifier.size(22.dp)
+                                modifier = Modifier.size(20.dp)
                             )
                         }
                     }
@@ -461,7 +489,7 @@ fun VideoPlayerView(
                     // Next Frame (33ms)
                     IconButton(
                         onClick = { playerController.stepFrame(1) },
-                        modifier = Modifier.size(28.dp).testTag("next_frame_button")
+                        modifier = Modifier.size(26.dp).testTag("next_frame_button")
                     ) {
                         Text(
                             text = "+1f",
@@ -474,7 +502,7 @@ fun VideoPlayerView(
                     // Fast Forward 5s
                     IconButton(
                         onClick = { playerController.seekBy(5000L) },
-                        modifier = Modifier.size(32.dp).testTag("forward_5s_button")
+                        modifier = Modifier.size(30.dp).testTag("forward_5s_button")
                     ) {
                         Icon(
                             imageVector = StudioIcons.Forward,
@@ -487,7 +515,7 @@ fun VideoPlayerView(
                     // Loop Toggle
                     IconButton(
                         onClick = { playerController.toggleLooping() },
-                        modifier = Modifier.size(30.dp).testTag("loop_toggle_btn")
+                        modifier = Modifier.size(28.dp).testTag("loop_toggle_btn")
                     ) {
                         Icon(
                             imageVector = StudioIcons.Refresh,
@@ -495,6 +523,21 @@ fun VideoPlayerView(
                             tint = if (playerState.isLooping) ImmersivePrimary else Color.White.copy(alpha = 0.45f),
                             modifier = Modifier.size(15.dp)
                         )
+                    }
+
+                    // Fullscreen Toggle in pill
+                    if (onToggleFullscreen != null) {
+                        IconButton(
+                            onClick = onToggleFullscreen,
+                            modifier = Modifier.size(28.dp).testTag("fullscreen_toggle_pill_btn")
+                        ) {
+                            Icon(
+                                imageVector = StudioIcons.Fullscreen,
+                                contentDescription = "Enter Fullscreen",
+                                tint = ImmersivePrimary,
+                                modifier = Modifier.size(17.dp)
+                            )
+                        }
                     }
                 }
             }

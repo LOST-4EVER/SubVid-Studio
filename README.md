@@ -1,27 +1,38 @@
 # SubVid Studio 🎬⚡
 
-**SubVid Studio** is a professional, high-performance Android subtitle editor, timeline synchronizer, batch processor, and video hardcoder designed with Kotlin and Jetpack Compose.
+**SubVid Studio** is an advanced, high-performance Android subtitle editor, timeline synchronizer, batch processor, and video hardcoder built natively with Kotlin and Jetpack Compose. Designed for content creators, subtitlers, video editors, and translators who demand frame-accurate precision, interactive canvas drag-and-drop subtitle positioning, and blazing-fast hardware-accelerated video rendering.
 
 ---
 
-## ✨ Features
+## ✨ Key Features & Capabilities
 
-- **Project Management**: Home screen dashboard for quick project switching, metadata tracking, and history management.
-- **Timeline Scrubber**: Hardware-accelerated 60 FPS multitrack timeline scrubber with visual cue blocks, drag-and-drop seeking, split/merge controls, and micro-nudging (±0.1s / ±0.5s).
-- **Format Support**:
-  - **SRT** (SubRip Subtitle)
-  - **VTT** (WebVTT with position and line tags)
-  - **ASS / SSA** (Advanced SubStation Alpha with position `\pos(x,y)` and custom color/style overrides)
-- **Interactive Drag-and-Drop Editor**: Real-time canvas overlay allowing interactive dragging of subtitles directly over the video player with exact X/Y positioning.
-- **Batch Processing Hub**: Process multiple subtitle and video operations in bulk:
-  - Format conversions (e.g. SRT to ASS / VTT)
-  - Global time shifting
-  - Lossless MKV/MP4 soft-muxing
-  - Multi-threaded CPU / Hardware-accelerated video burn-in
-- **Hardware-Accelerated Video Export**:
-  - Lossless container multiplexing
-  - High-bitrate hardcoded burn-in using Android `MediaCodec` and `MediaMuxer`
-- **Modern Immersive Design**: Material Design 3 theme with pure vector SVG graphics and dynamic touch target ergonomics.
+- 📺 **Fullscreen Live Video Playback & Editing**:
+  - Full-screen edge-to-edge video preview with cinema-grade controls.
+  - Interactive on-video subtitle dragging with real-time safe-area bounding boxes and coordinate crosshairs directly in fullscreen.
+  - Frame-stepping (±1 frame at ~33ms precision), 5-second fast seek, multi-speed playback (0.5x – 2.0x), and loop toggling.
+  - Aspect ratio toggle (Fit / Zoom) and quick-access styling sheets directly inside the fullscreen theater view.
+- ⏱️ **Multitrack Canvas Timeline Scrubber**:
+  - Hardware-accelerated 60 FPS timeline scrubber rendering cue intervals on a custom Canvas without Compose recomposition bottlenecks.
+  - Visual cue blocks with real-time playhead tracking, drag-to-seek, cue splitting, and micro-nudging (±0.1s / ±0.5s).
+- 🔤 **Universal Subtitle Format Support**:
+  - **SRT** (SubRip Subtitle format with HTML markup formatting `<b>`, `<i>`, `<u>`)
+  - **WebVTT** (`.vtt` format with position, line, and alignment metadata)
+  - **ASS / SSA** (Advanced SubStation Alpha with `\pos(x,y)`, `\an`, `\c&HBBGGRR&`, font overrides, and custom margins)
+- 🎨 **Interactive Drag-and-Drop Caption Layout Engine**:
+  - Freely drag subtitle overlays directly across video viewports.
+  - 9-point anchor alignment presets (Top-Left, Center, Bottom-Center, etc.) with custom coordinate overrides.
+  - Real-time styling: Text colors, stroke outline width/color, semi-transparent background box, corner radius, and font scaling.
+- ⚡ **Hardware-Accelerated Video Exporter (`MediaCodec` + `MediaMuxer`)**:
+  - **Lossless Soft-Muxing**: Remux video, audio, and subtitle streams in seconds without re-encoding quality loss.
+  - **Hardcoded Burn-In**: High-bitrate AVC/H.264 video hardware encoder with pixel-perfect subtitle rasterization directly onto video frames.
+  - Resolution presets: Native Source, 1080p Full HD, and 720p HD.
+- 🧩 **Multi-Threaded CPU/GPU Batch Hub**:
+  - Bulk subtitle format conversion (e.g., SRT ↔ VTT ↔ ASS).
+  - Mass timecode synchronization & shifting.
+  - Configurable thread pools (1–8 CPU cores) and batch queue management.
+- 📱 **Universal Android 16 & Modern Device Compatibility**:
+  - Optimized for Android 16 (API 36) through Android 7.0 (API 24) on standard phones, foldable devices, and tablets.
+  - ProGuard/R8 minification and resource shrinking for a compact APK footprint.
 
 ---
 

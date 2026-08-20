@@ -35,14 +35,38 @@ fun EditorToolbeltStrip(
     onStyleClick: () -> Unit,
     onSubtitlesListClick: () -> Unit,
     onExportClick: () -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    onFullscreenClick: (() -> Unit)? = null
 ) {
     Row(
         modifier = modifier
             .fillMaxWidth()
             .padding(vertical = 2.dp),
-        horizontalArrangement = Arrangement.spacedBy(8.dp)
+        horizontalArrangement = Arrangement.spacedBy(6.dp)
     ) {
+        // Fullscreen Theater Mode Button
+        if (onFullscreenClick != null) {
+            Surface(
+                shape = RoundedCornerShape(12.dp),
+                color = ImmersiveSurface,
+                border = androidx.compose.foundation.BorderStroke(1.dp, ImmersiveBorder),
+                modifier = Modifier
+                    .weight(1f)
+                    .clickable { onFullscreenClick() }
+                    .testTag("toolbelt_fullscreen_btn")
+            ) {
+                Column(
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.Center,
+                    modifier = Modifier.padding(vertical = 10.dp)
+                ) {
+                    Icon(StudioIcons.Fullscreen, contentDescription = null, tint = ImmersivePrimary, modifier = Modifier.size(18.dp))
+                    Spacer(Modifier.height(4.dp))
+                    Text("Theater", color = ImmersiveTextPrimary, fontSize = 10.sp, fontWeight = FontWeight.Bold)
+                }
+            }
+        }
+
         // Placement Matrix Button
         Surface(
             shape = RoundedCornerShape(12.dp),
@@ -79,7 +103,7 @@ fun EditorToolbeltStrip(
                 verticalArrangement = Arrangement.Center,
                 modifier = Modifier.padding(vertical = 10.dp)
             ) {
-                Icon(StudioIcons.Style, contentDescription = null, tint = ImmersivePrimary, modifier = Modifier.size(18.dp))
+                Icon(StudioIcons.Style, contentDescription = null, tint = AccentEmerald, modifier = Modifier.size(18.dp))
                 Spacer(Modifier.height(4.dp))
                 Text("Styling", color = ImmersiveTextPrimary, fontSize = 10.sp, fontWeight = FontWeight.Bold)
             }
@@ -100,7 +124,7 @@ fun EditorToolbeltStrip(
                 verticalArrangement = Arrangement.Center,
                 modifier = Modifier.padding(vertical = 10.dp)
             ) {
-                Icon(StudioIcons.Subtitles, contentDescription = null, tint = AccentEmerald, modifier = Modifier.size(18.dp))
+                Icon(StudioIcons.Subtitles, contentDescription = null, tint = ImmersiveTextPrimary, modifier = Modifier.size(18.dp))
                 Spacer(Modifier.height(4.dp))
                 Text("Cues List", color = ImmersiveTextPrimary, fontSize = 10.sp, fontWeight = FontWeight.Bold)
             }
@@ -111,7 +135,7 @@ fun EditorToolbeltStrip(
             shape = RoundedCornerShape(12.dp),
             color = ImmersivePrimary,
             modifier = Modifier
-                .weight(1f)
+                .weight(1.1f)
                 .clickable { onExportClick() }
                 .testTag("toolbelt_export_btn")
         ) {
