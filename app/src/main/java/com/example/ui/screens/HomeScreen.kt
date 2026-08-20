@@ -76,6 +76,7 @@ fun HomeScreen(
     val settings by viewModel.processingSettings.collectAsState()
     var showNewProjectDialog by remember { mutableStateOf(false) }
     var newProjectName by remember { mutableStateOf("") }
+    var projectToDelete by remember { mutableStateOf<StudioProject?>(null) }
 
     val videoPickerLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.GetContent()
@@ -452,7 +453,7 @@ fun HomeScreen(
                 ProjectListItemCard(
                     project = project,
                     onOpen = { viewModel.openProject(project) },
-                    onDelete = { viewModel.deleteProject(project.id) }
+                    onDelete = { projectToDelete = project }
                 )
             }
         }
@@ -507,6 +508,42 @@ fun HomeScreen(
             },
             dismissButton = {
                 TextButton(onClick = { showNewProjectDialog = false }) {
+                    Text("Cancel", color = ImmersiveTextSecondary, fontSize = 12.sp)
+                }
+            }
+        )
+    }
+
+    // Delete Project Confirmation Dialog
+    val toDelete = projectToDelete
+    if (toDelete != null) {
+        AlertDialog(
+            onDismissRequest = { projectToDelete = null },
+            containerColor = ImmersiveSurface,
+            title = {
+                Text("Delete Project?", color = ImmersiveTextPrimary, fontSize = 15.sp, fontWeight = FontWeight.Bold)
+            },
+            text = {
+                Text(
+                    text = "Are you sure you want to delete '${toDelete.name}'? This action cannot be undone.",
+                    color = ImmersiveTextSecondary,
+                    fontSize = 12.sp
+                )
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        viewModel.deleteProject(toDelete.id)
+                        projectToDelete = null
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = AccentRose),
+                    shape = RoundedCornerShape(8.dp)
+                ) {
+                    Text("Delete", color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { projectToDelete = null }) {
                     Text("Cancel", color = ImmersiveTextSecondary, fontSize = 12.sp)
                 }
             }

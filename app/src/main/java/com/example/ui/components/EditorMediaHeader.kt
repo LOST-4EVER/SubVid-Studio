@@ -50,6 +50,7 @@ fun EditorMediaHeader(
     onCreateNewSubtitleTrack: () -> Unit,
     onSaveSubtitleTrack: (SubtitleFormat) -> Unit,
     onUnloadSubtitleTrack: () -> Unit,
+    onBackClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     var showVideoMenu by remember { mutableStateOf(false) }
@@ -68,24 +69,42 @@ fun EditorMediaHeader(
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            // Active project / file label
-            Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    text = if (videoFileName.isNotEmpty()) videoFileName else "SubVid Studio Editor",
-                    color = ImmersiveTextPrimary,
-                    fontSize = 12.sp,
-                    fontWeight = FontWeight.Bold,
-                    maxLines = 1
-                )
-                Text(
-                    text = if (subtitleTrack.cues.isNotEmpty()) {
-                        "${subtitleTrack.cues.size} Cues • ${subtitleTrack.format.extension.uppercase()}"
-                    } else {
-                        "No Subtitles Loaded"
-                    },
-                    color = if (subtitleTrack.cues.isNotEmpty()) AccentCyan else ImmersiveTextMuted,
-                    fontSize = 10.sp
-                )
+            // Left Group: Back Button + Project Info
+            Row(
+                modifier = Modifier.weight(1f),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                androidx.compose.material3.IconButton(
+                    onClick = onBackClick,
+                    modifier = Modifier.size(32.dp)
+                ) {
+                    Icon(
+                        imageVector = StudioIcons.ArrowBack,
+                        contentDescription = "Back to Home",
+                        tint = ImmersivePrimary,
+                        modifier = Modifier.size(18.dp)
+                    )
+                }
+
+                Column {
+                    Text(
+                        text = if (videoFileName.isNotEmpty()) videoFileName else "SubVid Studio Editor",
+                        color = ImmersiveTextPrimary,
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.Bold,
+                        maxLines = 1
+                    )
+                    Text(
+                        text = if (subtitleTrack.cues.isNotEmpty()) {
+                            "${subtitleTrack.cues.size} Cues • ${subtitleTrack.format.extension.uppercase()}"
+                        } else {
+                            "No Subtitles Loaded"
+                        },
+                        color = if (subtitleTrack.cues.isNotEmpty()) AccentCyan else ImmersiveTextMuted,
+                        fontSize = 10.sp
+                    )
+                }
             }
 
             // Media Action Buttons

@@ -468,4 +468,6 @@ object StudioIcons {
         lineTo(21f, 19f)
         close()
     }.build()
+
+    val ArrowBack = Icons.AutoMirrored.Filled.ArrowBack
 }

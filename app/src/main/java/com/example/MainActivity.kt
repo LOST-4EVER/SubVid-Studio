@@ -17,6 +17,7 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.unit.dp
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
@@ -86,18 +87,21 @@ fun StudioApp(viewModel: MainViewModel) {
         Scaffold(
             containerColor = ImmersiveBg,
             bottomBar = {
-                StudioNavBar(
-                    currentTab = currentTab,
-                    onTabSelected = { tab -> viewModel.setTab(tab) }
-                )
+                if (currentTab != AppTab.EDITOR) {
+                    StudioNavBar(
+                        currentTab = currentTab,
+                        onTabSelected = { tab -> viewModel.setTab(tab) }
+                    )
+                }
             },
             modifier = Modifier.fillMaxSize()
         ) { paddingValues ->
+            val finalPadding = if (currentTab == AppTab.EDITOR) androidx.compose.foundation.layout.PaddingValues(0.dp) else paddingValues
             Box(
                 modifier = Modifier
                     .fillMaxSize()
                     .background(ImmersiveBg)
-                    .padding(paddingValues)
+                    .padding(finalPadding)
             ) {
                 when (currentTab) {
                     AppTab.HOME -> {

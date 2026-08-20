@@ -129,8 +129,7 @@ fun EditorScreen(
             modifier = modifier
                 .fillMaxSize()
                 .background(ImmersiveBg)
-                .padding(horizontal = 12.dp, vertical = 8.dp)
-                .verticalScroll(rememberScrollState()),
+                .padding(horizontal = 12.dp, vertical = 8.dp),
             verticalArrangement = Arrangement.spacedBy(10.dp)
         ) {
             // 1. Modular Studio Header with Quick Media Actions
@@ -147,7 +146,8 @@ fun EditorScreen(
                     val ext = format.extension
                     saveSubtitleLauncher.launch("${subtitleTrack.title.ifEmpty { "subtitles" }}.$ext")
                 },
-                onUnloadSubtitleTrack = { viewModel.unloadSubtitleTrack() }
+                onUnloadSubtitleTrack = { viewModel.unloadSubtitleTrack() },
+                onBackClick = { viewModel.setTab(com.example.model.AppTab.HOME) }
             )
 
             // 2. Video Viewport Canvas OR Empty Video Placeholder Card
@@ -158,7 +158,7 @@ fun EditorScreen(
                     border = androidx.compose.foundation.BorderStroke(1.dp, ImmersiveCardBorder),
                     modifier = Modifier
                         .fillMaxWidth()
-                        .height(200.dp)
+                        .height(180.dp)
                 ) {
                     Column(
                         modifier = Modifier
@@ -224,7 +224,7 @@ fun EditorScreen(
                     },
                     modifier = Modifier
                         .fillMaxWidth()
-                        .height(220.dp)
+                        .height(200.dp)
                 )
             }
 
@@ -245,34 +245,43 @@ fun EditorScreen(
                 onShiftCueTiming = { cue, delta -> viewModel.shiftCueTiming(cue, delta) }
             )
 
-            // 4. Live Selected Cue Inspector Component
-            val currentSelected = selectedCue ?: activeCue
-            if (currentSelected != null) {
-                val currentIdx = subtitleTrack.cues.indexOfFirst { it.id == currentSelected.id }
-                EditorCueInspector(
-                    selectedCue = currentSelected,
-                    totalCuesCount = subtitleTrack.cues.size,
-                    currentCueIndex = currentIdx,
-                    onSelectPreviousCue = { viewModel.selectPreviousCue() },
-                    onSelectNextCue = { viewModel.selectNextCue() },
-                    onDuplicateCue = { viewModel.duplicateSelectedCue() },
-                    onUpdateCueText = { cue, text -> viewModel.updateCueText(cue, text) }
+            // 4. Scrollable bottom sheet section for inspector & action belt
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .weight(1f)
+                    .verticalScroll(rememberScrollState()),
+                verticalArrangement = Arrangement.spacedBy(10.dp)
+            ) {
+                // 4. Live Selected Cue Inspector Component
+                val currentSelected = selectedCue ?: activeCue
+                if (currentSelected != null) {
+                    val currentIdx = subtitleTrack.cues.indexOfFirst { it.id == currentSelected.id }
+                    EditorCueInspector(
+                        selectedCue = currentSelected,
+                        totalCuesCount = subtitleTrack.cues.size,
+                        currentCueIndex = currentIdx,
+                        onSelectPreviousCue = { viewModel.selectPreviousCue() },
+                        onSelectNextCue = { viewModel.selectNextCue() },
+                        onDuplicateCue = { viewModel.duplicateSelectedCue() },
+                        onUpdateCueText = { cue, text -> viewModel.updateCueText(cue, text) }
+                    )
+                }
+
+                // 5. Studio Action Strip / Toolbelt Component
+                EditorToolbeltStrip(
+                    onPlacementClick = { viewModel.setShowPlacementDialog(true) },
+                    onStyleClick = { viewModel.setShowStyleDialog(true) },
+                    onSubtitlesListClick = { viewModel.setShowSubtitleListSheet(true) },
+                    onExportClick = { viewModel.setShowExportDialog(true) },
+                    onFullscreenClick = if (videoMetadata.uriString.isNotEmpty()) {
+                        { viewModel.setFullscreenVideo(true) }
+                    } else null
                 )
+
+                // Bottom spacing for navigation bar
+                Spacer(Modifier.height(60.dp))
             }
-
-            // 5. Studio Action Strip / Toolbelt Component
-            EditorToolbeltStrip(
-                onPlacementClick = { viewModel.setShowPlacementDialog(true) },
-                onStyleClick = { viewModel.setShowStyleDialog(true) },
-                onSubtitlesListClick = { viewModel.setShowSubtitleListSheet(true) },
-                onExportClick = { viewModel.setShowExportDialog(true) },
-                onFullscreenClick = if (videoMetadata.uriString.isNotEmpty()) {
-                    { viewModel.setFullscreenVideo(true) }
-                } else null
-            )
-
-            // Bottom spacing for navigation bar
-            Spacer(Modifier.height(60.dp))
         }
     }
 

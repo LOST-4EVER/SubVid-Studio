@@ -87,6 +87,21 @@ jobs:
             keytool -genkey -v -keystore release.keystore -alias releasekey -keyalg RSA -keysize 2048 -validity 10000 -storepass android -keypass android -dname "CN=SubVidStudio, OU=Android, O=SubVid, L=City, S=State, C=US"
           fi
 
+      - name: Determine and Inject Version Number
+        id: version_step
+        run: |
+          BUILD_NUM="${{ github.run_number }}"
+          if [[ "${{ github.ref }}" == refs/tags/v* ]]; then
+            RAW_TAG="${{ github.ref_name }}"
+            CLEAN_VERSION="${RAW_TAG#v}"
+          else
+            CLEAN_VERSION="1.1.0-build.${BUILD_NUM}"
+          fi
+          echo "Injecting VersionName: ${CLEAN_VERSION} and VersionCode: ${BUILD_NUM} into app/build.gradle.kts"
+          sed -i 's/versionName = ".*"/versionName = "'"${CLEAN_VERSION}"'"/' app/build.gradle.kts
+          sed -i 's/versionCode = .*/versionCode = '"${BUILD_NUM}"'/' app/build.gradle.kts
+          echo "clean_version=${CLEAN_VERSION}" >> $GITHUB_OUTPUT
+
       - name: Build Debug and Release APKs
         env:
           KEYSTORE_PATH: ${{ github.workspace }}/release.keystore
@@ -118,15 +133,15 @@ jobs:
         id: release_info
         run: |
           BUILD_NUM="${{ github.run_number }}"
-          SHORT_SHA="$(echo ${{ github.sha }} | cut -c1-7)"
           TIMESTAMP="$(date +'%Y-%m-%d %H:%M UTC')"
           TAG_DATE="$(date +'%Y%m%d-%H%M%S')"
+          CLEAN_VER="${{ steps.version_step.outputs.clean_version }}"
           if [[ "${{ github.ref }}" == refs/tags/v* ]]; then
             TAG_NAME="${{ github.ref_name }}"
             RELEASE_NAME="SubVid Studio ${TAG_NAME}"
           else
-            TAG_NAME="v1.1.0-build.${BUILD_NUM}-${TAG_DATE}"
-            RELEASE_NAME="SubVid Studio v1.1.0 (Build #${BUILD_NUM} • ${TIMESTAMP})"
+            TAG_NAME="v${CLEAN_VER}-${TAG_DATE}"
+            RELEASE_NAME="SubVid Studio v${CLEAN_VER} (${TIMESTAMP})"
           fi
           echo "tag_name=${TAG_NAME}" >> $GITHUB_OUTPUT
           echo "release_name=${RELEASE_NAME}" >> $GITHUB_OUTPUT

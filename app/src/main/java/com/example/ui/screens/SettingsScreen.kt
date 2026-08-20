@@ -317,6 +317,39 @@ fun SettingsScreen(
                         }
                     }
 
+                    // Target Frame Rate (FPS)
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Column {
+                            Text("Target Frame Rate", color = ImmersiveTextPrimary, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                            Text("Default export encoding rate", color = ImmersiveTextSecondary, fontSize = 10.sp)
+                        }
+
+                        Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                            listOf(30, 60).forEach { fps ->
+                                val selected = settings.targetFps == fps
+                                Surface(
+                                    shape = RoundedCornerShape(6.dp),
+                                    color = if (selected) AccentCyan else ImmersiveActionBg,
+                                    modifier = Modifier.clickable {
+                                        viewModel.updateProcessingSettings(settings.copy(targetFps = fps))
+                                    }
+                                ) {
+                                    Text(
+                                        text = "$fps FPS",
+                                        color = if (selected) Color.Black else ImmersiveTextPrimary,
+                                        fontSize = 10.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp)
+                                    )
+                                }
+                            }
+                        }
+                    }
+
                     // Quality Preset
                     Row(
                         modifier = Modifier.fillMaxWidth(),
@@ -341,6 +374,54 @@ fun SettingsScreen(
                             )
                         }
                     }
+
+                    // Auto-Save Project Switch
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text("Auto-Save Project State", color = ImmersiveTextPrimary, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                            Text("Saves state on every edit event", color = ImmersiveTextSecondary, fontSize = 10.sp)
+                        }
+                        Switch(
+                            checked = settings.autoSaveProject,
+                            onCheckedChange = { isChecked ->
+                                viewModel.updateProcessingSettings(settings.copy(autoSaveProject = isChecked))
+                            },
+                            colors = SwitchDefaults.colors(
+                                checkedThumbColor = AccentCyan,
+                                checkedTrackColor = AccentCyan.copy(alpha = 0.3f),
+                                uncheckedThumbColor = ImmersiveTextSecondary,
+                                uncheckedTrackColor = ImmersiveActionBg
+                            )
+                        )
+                    }
+
+                    // Hardware Surface Rendering Switch
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text("Hardware Surface Rendering", color = ImmersiveTextPrimary, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                            Text("OpenGL buffer streaming for playback", color = ImmersiveTextSecondary, fontSize = 10.sp)
+                        }
+                        Switch(
+                            checked = settings.enableHardwareSurface,
+                            onCheckedChange = { isChecked ->
+                                viewModel.updateProcessingSettings(settings.copy(enableHardwareSurface = isChecked))
+                            },
+                            colors = SwitchDefaults.colors(
+                                checkedThumbColor = AccentCyan,
+                                checkedTrackColor = AccentCyan.copy(alpha = 0.3f),
+                                uncheckedThumbColor = ImmersiveTextSecondary,
+                                uncheckedTrackColor = ImmersiveActionBg
+                            )
+                        )
+                    }
                 }
             }
         }
@@ -364,7 +445,7 @@ fun SettingsScreen(
                         horizontalArrangement = Arrangement.spacedBy(6.dp)
                     ) {
                         Icon(StudioIcons.Info, contentDescription = null, tint = ImmersivePrimary, modifier = Modifier.size(16.dp))
-                        Text("SubVid Studio v1.0 • Pro Build", color = ImmersiveTextPrimary, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                        Text("SubVid Studio v${com.example.BuildConfig.VERSION_NAME} • Pro Build", color = ImmersiveTextPrimary, fontSize = 12.sp, fontWeight = FontWeight.Bold)
                     }
 
                     Text(
