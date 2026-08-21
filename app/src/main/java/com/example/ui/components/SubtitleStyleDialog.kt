@@ -42,6 +42,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
@@ -83,7 +84,7 @@ fun SubtitleStyleDialog(
 
     val colorPalette = listOf(
         0xFFFFFFFFL to "White",
-        0xFF00E5FFL to "Neon Cyan",
+        0xFF00E5FFL to "Cyan",
         0xFFFCD34DL to "Amber",
         0xFFA7F3D0L to "Emerald",
         0xFFD0BCFFL to "Lavender",
@@ -93,7 +94,7 @@ fun SubtitleStyleDialog(
 
     Dialog(onDismissRequest = onDismiss) {
         Card(
-            shape = RoundedCornerShape(28.dp),
+            shape = RectangleShape,
             colors = CardDefaults.cardColors(containerColor = ImmersiveSurface),
             border = androidx.compose.foundation.BorderStroke(1.dp, ImmersiveBorder),
             modifier = Modifier
@@ -121,7 +122,7 @@ fun SubtitleStyleDialog(
                         Box(
                             modifier = Modifier
                                 .size(36.dp)
-                                .background(ImmersivePrimary.copy(alpha = 0.2f), CircleShape),
+                                .background(ImmersivePrimary.copy(alpha = 0.2f), RectangleShape),
                             contentAlignment = Alignment.Center
                         ) {
                             Icon(StudioIcons.Style, contentDescription = null, tint = ImmersivePrimary, modifier = Modifier.size(20.dp))
@@ -138,7 +139,7 @@ fun SubtitleStyleDialog(
 
                 // Live Preview Card
                 Surface(
-                    shape = RoundedCornerShape(14.dp),
+                    shape = RectangleShape,
                     color = ImmersiveBg,
                     border = androidx.compose.foundation.BorderStroke(1.dp, ImmersiveBorder),
                     modifier = Modifier.fillMaxWidth()
@@ -152,7 +153,7 @@ fun SubtitleStyleDialog(
                         val previewBg = if (hasBackgroundBox) Color(0x99000000) else Color.Transparent
                         Box(
                             modifier = Modifier
-                                .background(previewBg, RoundedCornerShape(6.dp))
+                                .background(previewBg, RectangleShape)
                                 .padding(horizontal = 12.dp, vertical = 6.dp)
                         ) {
                             Text(
@@ -200,12 +201,11 @@ fun SubtitleStyleDialog(
                             Box(
                                 modifier = Modifier
                                     .size(36.dp)
-                                    .clip(CircleShape)
-                                    .background(Color(colorVal))
+                                    .background(Color(colorVal), RectangleShape)
                                     .border(
                                         width = if (isSelected) 3.dp else 1.dp,
                                         color = if (isSelected) ImmersivePrimary else Color.Gray,
-                                        shape = CircleShape
+                                        shape = RectangleShape
                                     )
                                     .clickable { selectedTextColor = colorVal },
                                 contentAlignment = Alignment.Center
@@ -224,7 +224,7 @@ fun SubtitleStyleDialog(
                     horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
                     Surface(
-                        shape = RoundedCornerShape(10.dp),
+                        shape = RectangleShape,
                         color = if (isBold) ImmersivePrimary else ImmersiveActionBg,
                         modifier = Modifier
                             .weight(1f)
@@ -243,7 +243,7 @@ fun SubtitleStyleDialog(
                     }
 
                     Surface(
-                        shape = RoundedCornerShape(10.dp),
+                        shape = RectangleShape,
                         color = if (isItalic) ImmersivePrimary else ImmersiveActionBg,
                         modifier = Modifier
                             .weight(1f)
@@ -264,7 +264,7 @@ fun SubtitleStyleDialog(
 
                 // Background Box Toggle
                 Surface(
-                    shape = RoundedCornerShape(12.dp),
+                    shape = RectangleShape,
                     color = ImmersiveSurfaceCard,
                     modifier = Modifier.fillMaxWidth()
                 ) {
@@ -292,7 +292,7 @@ fun SubtitleStyleDialog(
 
                 // Apply to All Switch
                 Surface(
-                    shape = RoundedCornerShape(12.dp),
+                    shape = RectangleShape,
                     color = ImmersiveSurfaceCard,
                     modifier = Modifier.fillMaxWidth()
                 ) {
@@ -345,7 +345,7 @@ fun SubtitleStyleDialog(
                             containerColor = ImmersivePrimary,
                             contentColor = ImmersiveOnPrimary
                         ),
-                        shape = RoundedCornerShape(12.dp),
+                        shape = RectangleShape,
                         modifier = Modifier.testTag("apply_style_button")
                     ) {
                         Text("Apply Style", fontWeight = FontWeight.Bold)

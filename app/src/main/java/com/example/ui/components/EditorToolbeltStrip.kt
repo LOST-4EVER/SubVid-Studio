@@ -17,6 +17,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -47,7 +48,7 @@ fun EditorToolbeltStrip(
         // Fullscreen Theater Mode Button
         if (onFullscreenClick != null) {
             Surface(
-                shape = RoundedCornerShape(12.dp),
+                shape = RectangleShape,
                 color = ImmersiveSurface,
                 border = androidx.compose.foundation.BorderStroke(1.dp, ImmersiveBorder),
                 modifier = Modifier
@@ -69,7 +70,7 @@ fun EditorToolbeltStrip(
 
         // Placement Matrix Button
         Surface(
-            shape = RoundedCornerShape(12.dp),
+            shape = RectangleShape,
             color = ImmersiveSurface,
             border = androidx.compose.foundation.BorderStroke(1.dp, ImmersiveBorder),
             modifier = Modifier
@@ -90,7 +91,7 @@ fun EditorToolbeltStrip(
 
         // Style Customizer Button
         Surface(
-            shape = RoundedCornerShape(12.dp),
+            shape = RectangleShape,
             color = ImmersiveSurface,
             border = androidx.compose.foundation.BorderStroke(1.dp, ImmersiveBorder),
             modifier = Modifier
@@ -111,7 +112,7 @@ fun EditorToolbeltStrip(
 
         // Subtitle List Sheet Button
         Surface(
-            shape = RoundedCornerShape(12.dp),
+            shape = RectangleShape,
             color = ImmersiveSurface,
             border = androidx.compose.foundation.BorderStroke(1.dp, ImmersiveBorder),
             modifier = Modifier
@@ -132,7 +133,7 @@ fun EditorToolbeltStrip(
 
         // Export Suite Button
         Surface(
-            shape = RoundedCornerShape(12.dp),
+            shape = RectangleShape,
             color = ImmersivePrimary,
             modifier = Modifier
                 .weight(1.1f)

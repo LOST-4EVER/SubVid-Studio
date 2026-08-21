@@ -39,6 +39,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontFamily
@@ -89,7 +90,7 @@ fun ExportDialog(
         }
     }) {
         Card(
-            shape = RoundedCornerShape(28.dp),
+            shape = RectangleShape,
             colors = CardDefaults.cardColors(containerColor = ImmersiveSurface),
             border = androidx.compose.foundation.BorderStroke(1.dp, ImmersiveBorder),
             modifier = Modifier
@@ -117,7 +118,7 @@ fun ExportDialog(
                         Box(
                             modifier = Modifier
                                 .size(36.dp)
-                                .background(ImmersivePrimary.copy(alpha = 0.2f), CircleShape),
+                                .background(ImmersivePrimary.copy(alpha = 0.2f), RectangleShape),
                             contentAlignment = Alignment.Center
                         ) {
                             Icon(StudioIcons.Export, contentDescription = null, tint = ImmersivePrimary, modifier = Modifier.size(20.dp))
@@ -146,7 +147,7 @@ fun ExportDialog(
                         ExportMode.values().forEach { mode ->
                             val isSelected = selectedMode == mode
                             Surface(
-                                shape = RoundedCornerShape(14.dp),
+                                shape = RectangleShape,
                                 color = if (isSelected) ImmersivePrimary.copy(alpha = 0.15f) else ImmersiveBg,
                                 border = androidx.compose.foundation.BorderStroke(
                                     1.dp,
@@ -184,7 +185,7 @@ fun ExportDialog(
                             QualityPreset.values().forEach { preset ->
                                 val isSelected = selectedQuality == preset
                                 Surface(
-                                    shape = RoundedCornerShape(10.dp),
+                                    shape = RectangleShape,
                                     color = if (isSelected) ImmersiveActionBg else ImmersiveBg,
                                     border = androidx.compose.foundation.BorderStroke(
                                         1.dp,
@@ -215,7 +216,7 @@ fun ExportDialog(
                                 listOf("mp4" to "MP4 Container", "mkv" to "Matroska (MKV)").forEach { (ext, label) ->
                                     val isSelected = containerFormat == ext
                                     Surface(
-                                        shape = RoundedCornerShape(10.dp),
+                                        shape = RectangleShape,
                                         color = if (isSelected) ImmersivePrimary else ImmersiveActionBg,
                                         modifier = Modifier
                                             .weight(1f)
@@ -237,7 +238,7 @@ fun ExportDialog(
                                 listOf(SubtitleFormat.SRT, SubtitleFormat.VTT, SubtitleFormat.ASS).forEach { fmt ->
                                     val isSelected = subtitleFormat == fmt
                                     Surface(
-                                        shape = RoundedCornerShape(10.dp),
+                                        shape = RectangleShape,
                                         color = if (isSelected) ImmersivePrimary else ImmersiveActionBg,
                                         modifier = Modifier
                                             .weight(1f)
@@ -266,7 +267,7 @@ fun ExportDialog(
                                 containerColor = ImmersivePrimary,
                                 contentColor = ImmersiveOnPrimary
                             ),
-                            shape = RoundedCornerShape(14.dp),
+                            shape = RectangleShape,
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .height(48.dp)
@@ -300,7 +301,7 @@ fun ExportDialog(
                                 modifier = Modifier
                                     .fillMaxWidth()
                                     .height(8.dp)
-                                    .border(1.dp, ImmersiveBorder, RoundedCornerShape(4.dp))
+                                    .border(1.dp, ImmersiveBorder, RectangleShape)
                             )
 
                             Text(
@@ -324,7 +325,7 @@ fun ExportDialog(
                             Box(
                                 modifier = Modifier
                                     .size(56.dp)
-                                    .background(AccentEmerald.copy(alpha = 0.2f), CircleShape),
+                                    .background(AccentEmerald.copy(alpha = 0.2f), RectangleShape),
                                 contentAlignment = Alignment.Center
                             ) {
                                 Icon(StudioIcons.Check, contentDescription = null, tint = AccentEmerald, modifier = Modifier.size(32.dp))
@@ -334,7 +335,7 @@ fun ExportDialog(
                             Text("File Size: ${exportState.fileSizeFormatted}", color = AccentCyan, fontSize = 13.sp)
 
                             Surface(
-                                shape = RoundedCornerShape(10.dp),
+                                shape = RectangleShape,
                                 color = ImmersiveBg,
                                 modifier = Modifier.fillMaxWidth()
                             ) {
@@ -373,7 +374,7 @@ fun ExportDialog(
                                         containerColor = ImmersivePrimary,
                                         contentColor = ImmersiveOnPrimary
                                     ),
-                                    shape = RoundedCornerShape(12.dp),
+                                    shape = RectangleShape,
                                     modifier = Modifier.weight(1f)
                                 ) {
                                     Text("Share File", fontWeight = FontWeight.Bold)
@@ -388,7 +389,7 @@ fun ExportDialog(
                                         containerColor = ImmersiveActionBg,
                                         contentColor = ImmersiveTextPrimary
                                     ),
-                                    shape = RoundedCornerShape(12.dp),
+                                    shape = RectangleShape,
                                     modifier = Modifier.weight(1f)
                                 ) {
                                     Text("Done")
@@ -408,7 +409,7 @@ fun ExportDialog(
                             Box(
                                 modifier = Modifier
                                     .size(56.dp)
-                                    .background(AccentRose.copy(alpha = 0.2f), CircleShape),
+                                    .background(AccentRose.copy(alpha = 0.2f), RectangleShape),
                                 contentAlignment = Alignment.Center
                             ) {
                                 Icon(StudioIcons.Close, contentDescription = null, tint = AccentRose, modifier = Modifier.size(32.dp))
@@ -423,7 +424,7 @@ fun ExportDialog(
                                     containerColor = ImmersivePrimary,
                                     contentColor = ImmersiveOnPrimary
                                 ),
-                                shape = RoundedCornerShape(12.dp)
+                                shape = RectangleShape
                             ) {
                                 Text("Try Again")
                             }

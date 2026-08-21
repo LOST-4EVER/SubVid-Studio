@@ -39,6 +39,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -74,7 +75,7 @@ fun SubtitlePlacementDialog(
 
     Dialog(onDismissRequest = onDismiss) {
         Card(
-            shape = RoundedCornerShape(28.dp),
+            shape = RectangleShape,
             colors = CardDefaults.cardColors(containerColor = ImmersiveSurface),
             border = androidx.compose.foundation.BorderStroke(1.dp, ImmersiveBorder),
             modifier = Modifier
@@ -101,7 +102,7 @@ fun SubtitlePlacementDialog(
                         Box(
                             modifier = Modifier
                                 .size(36.dp)
-                                .background(ImmersivePrimary.copy(alpha = 0.2f), CircleShape),
+                                .background(ImmersivePrimary.copy(alpha = 0.2f), RectangleShape),
                             contentAlignment = Alignment.Center
                         ) {
                             Icon(
@@ -147,7 +148,7 @@ fun SubtitlePlacementDialog(
                 )
 
                 Surface(
-                    shape = RoundedCornerShape(16.dp),
+                    shape = RectangleShape,
                     color = ImmersiveBg,
                     border = androidx.compose.foundation.BorderStroke(1.dp, ImmersiveBorder),
                     modifier = Modifier.fillMaxWidth()
@@ -164,7 +165,7 @@ fun SubtitlePlacementDialog(
                                 row.forEach { align ->
                                     val isSelected = selectedAlignment == align
                                     Surface(
-                                        shape = RoundedCornerShape(10.dp),
+                                        shape = RectangleShape,
                                         color = if (isSelected) ImmersivePrimary else ImmersiveActionBg,
                                         modifier = Modifier
                                             .weight(1f)
@@ -255,7 +256,7 @@ fun SubtitlePlacementDialog(
 
                 // Apply to All Cues Switch
                 Surface(
-                    shape = RoundedCornerShape(12.dp),
+                    shape = RectangleShape,
                     color = ImmersiveSurfaceCard,
                     modifier = Modifier.fillMaxWidth()
                 ) {
@@ -300,7 +301,7 @@ fun SubtitlePlacementDialog(
                             containerColor = ImmersivePrimary,
                             contentColor = ImmersiveOnPrimary
                         ),
-                        shape = RoundedCornerShape(12.dp),
+                        shape = RectangleShape,
                         modifier = Modifier.testTag("apply_placement_button")
                     ) {
                         Text("Apply Placement", fontWeight = FontWeight.Bold)

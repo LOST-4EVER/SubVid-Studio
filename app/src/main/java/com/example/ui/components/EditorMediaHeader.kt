@@ -6,10 +6,12 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.layout.width
+import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
@@ -22,6 +24,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -44,6 +47,7 @@ fun EditorMediaHeader(
     videoFileName: String,
     hasVideoLoaded: Boolean,
     subtitleTrack: SubtitleTrack,
+    onSaveProjectClick: () -> Unit,
     onLoadVideoClick: () -> Unit,
     onUnloadVideoClick: () -> Unit,
     onLoadSubtitleClick: () -> Unit,
@@ -57,7 +61,7 @@ fun EditorMediaHeader(
     var showSubtitleMenu by remember { mutableStateOf(false) }
 
     Surface(
-        shape = RoundedCornerShape(16.dp),
+        shape = RectangleShape,
         color = ImmersiveSurface,
         border = androidx.compose.foundation.BorderStroke(1.dp, ImmersiveBorder),
         modifier = modifier.fillMaxWidth()
@@ -65,7 +69,7 @@ fun EditorMediaHeader(
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 12.dp, vertical = 8.dp),
+                .padding(horizontal = 10.dp, vertical = 8.dp),
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
@@ -107,15 +111,34 @@ fun EditorMediaHeader(
                 }
             }
 
-            // Media Action Buttons
+            // Right Group: Media & Project Action Buttons
             Row(
                 horizontalArrangement = Arrangement.spacedBy(6.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
+                // Save Project Button
+                Surface(
+                    shape = RectangleShape,
+                    color = AccentEmerald.copy(alpha = 0.15f),
+                    border = androidx.compose.foundation.BorderStroke(1.dp, AccentEmerald.copy(alpha = 0.5f)),
+                    modifier = Modifier
+                        .clickable { onSaveProjectClick() }
+                        .testTag("editor_save_project_btn")
+                ) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 5.dp),
+                        horizontalArrangement = Arrangement.spacedBy(4.dp)
+                    ) {
+                        Icon(StudioIcons.Save, contentDescription = null, tint = AccentEmerald, modifier = Modifier.size(13.dp))
+                        Text("Save", color = AccentEmerald, fontSize = 10.sp, fontWeight = FontWeight.Bold)
+                    }
+                }
+
                 // Video Dropdown Menu Button
                 Box {
                     Surface(
-                        shape = RoundedCornerShape(8.dp),
+                        shape = RectangleShape,
                         color = ImmersiveActionBg,
                         border = androidx.compose.foundation.BorderStroke(1.dp, ImmersiveBorder),
                         modifier = Modifier
@@ -135,6 +158,7 @@ fun EditorMediaHeader(
                     DropdownMenu(
                         expanded = showVideoMenu,
                         onDismissRequest = { showVideoMenu = false },
+                        shape = RectangleShape,
                         modifier = Modifier.background(ImmersiveSurface)
                     ) {
                         DropdownMenuItem(
@@ -161,7 +185,7 @@ fun EditorMediaHeader(
                 // Subtitles Dropdown Menu Button
                 Box {
                     Surface(
-                        shape = RoundedCornerShape(8.dp),
+                        shape = RectangleShape,
                         color = ImmersiveActionBg,
                         border = androidx.compose.foundation.BorderStroke(1.dp, ImmersiveBorder),
                         modifier = Modifier
@@ -181,6 +205,7 @@ fun EditorMediaHeader(
                     DropdownMenu(
                         expanded = showSubtitleMenu,
                         onDismissRequest = { showSubtitleMenu = false },
+                        shape = RectangleShape,
                         modifier = Modifier.background(ImmersiveSurface)
                     ) {
                         DropdownMenuItem(
@@ -201,7 +226,7 @@ fun EditorMediaHeader(
                         )
                         if (subtitleTrack.cues.isNotEmpty()) {
                             DropdownMenuItem(
-                                text = { Text("Save Subtitles (.SRT)...", color = ImmersiveTextPrimary, fontSize = 12.sp) },
+                                text = { Text("Export Subtitles (.SRT)...", color = ImmersiveTextPrimary, fontSize = 12.sp) },
                                 leadingIcon = { Icon(StudioIcons.Save, contentDescription = null, tint = AccentEmerald, modifier = Modifier.size(16.dp)) },
                                 onClick = {
                                     showSubtitleMenu = false
@@ -209,7 +234,7 @@ fun EditorMediaHeader(
                                 }
                             )
                             DropdownMenuItem(
-                                text = { Text("Save Subtitles (.VTT)...", color = ImmersiveTextPrimary, fontSize = 12.sp) },
+                                text = { Text("Export Subtitles (.VTT)...", color = ImmersiveTextPrimary, fontSize = 12.sp) },
                                 leadingIcon = { Icon(StudioIcons.Save, contentDescription = null, tint = AccentEmerald, modifier = Modifier.size(16.dp)) },
                                 onClick = {
                                     showSubtitleMenu = false
@@ -217,7 +242,7 @@ fun EditorMediaHeader(
                                 }
                             )
                             DropdownMenuItem(
-                                text = { Text("Save Subtitles (.ASS)...", color = ImmersiveTextPrimary, fontSize = 12.sp) },
+                                text = { Text("Export Subtitles (.ASS)...", color = ImmersiveTextPrimary, fontSize = 12.sp) },
                                 leadingIcon = { Icon(StudioIcons.Save, contentDescription = null, tint = AccentEmerald, modifier = Modifier.size(16.dp)) },
                                 onClick = {
                                     showSubtitleMenu = false

@@ -8,9 +8,11 @@ data class StudioProject(
     val videoUriString: String = "",
     val videoFileName: String = "No Video",
     val videoDurationMs: Long = 0L,
+    val currentPositionMs: Long = 0L,
     val subtitleFileName: String = "No Subtitles",
     val subtitleFormat: SubtitleFormat = SubtitleFormat.SRT,
     val cueCount: Int = 0,
+    val subtitleTrack: SubtitleTrack = SubtitleTrack(title = name, format = subtitleFormat, cues = emptyList()),
     val lastModifiedMs: Long = System.currentTimeMillis()
 ) {
     val hasVideo: Boolean get() = videoUriString.isNotEmpty()
@@ -21,3 +23,4 @@ data class StudioProject(
             return sdf.format(java.util.Date(lastModifiedMs))
         }
 }
+

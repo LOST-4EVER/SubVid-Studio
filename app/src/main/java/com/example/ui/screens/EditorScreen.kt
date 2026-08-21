@@ -38,6 +38,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -141,6 +142,10 @@ fun EditorScreen(
                 videoFileName = videoMetadata.fileName,
                 hasVideoLoaded = videoMetadata.uriString.isNotEmpty(),
                 subtitleTrack = subtitleTrack,
+                onSaveProjectClick = {
+                    viewModel.saveCurrentProject()
+                    Toast.makeText(context, "Project & subtitles saved", Toast.LENGTH_SHORT).show()
+                },
                 onLoadVideoClick = { videoPickerLauncher.launch("video/*") },
                 onUnloadVideoClick = { viewModel.unloadVideo() },
                 onLoadSubtitleClick = { subtitlePickerLauncher.launch("*/*") },
@@ -157,7 +162,7 @@ fun EditorScreen(
             // 2. Video Viewport Canvas OR Empty Video Placeholder Card
             if (videoMetadata.uriString.isEmpty()) {
                 Card(
-                    shape = RoundedCornerShape(16.dp),
+                    shape = RectangleShape,
                     colors = CardDefaults.cardColors(containerColor = ImmersiveSurface),
                     border = androidx.compose.foundation.BorderStroke(1.dp, ImmersiveCardBorder),
                     modifier = Modifier
@@ -173,12 +178,11 @@ fun EditorScreen(
                     ) {
                         Box(
                             modifier = Modifier
-                                .size(44.dp)
-                                .clip(CircleShape)
+                                .size(40.dp)
                                 .background(ImmersiveActionBg),
                             contentAlignment = Alignment.Center
                         ) {
-                            Icon(StudioIcons.Video, contentDescription = null, tint = ImmersivePrimary, modifier = Modifier.size(24.dp))
+                            Icon(StudioIcons.Video, contentDescription = null, tint = ImmersivePrimary, modifier = Modifier.size(22.dp))
                         }
 
                         Spacer(Modifier.height(8.dp))
@@ -201,7 +205,7 @@ fun EditorScreen(
                         Button(
                             onClick = { videoPickerLauncher.launch("video/*") },
                             colors = ButtonDefaults.buttonColors(containerColor = ImmersivePrimary),
-                            shape = RoundedCornerShape(8.dp),
+                            shape = RectangleShape,
                             contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 14.dp, vertical = 6.dp)
                         ) {
                             Icon(StudioIcons.Import, contentDescription = null, tint = Color.Black, modifier = Modifier.size(14.dp))

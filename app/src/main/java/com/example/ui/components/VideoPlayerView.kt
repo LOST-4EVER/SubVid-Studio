@@ -45,6 +45,7 @@ import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.PathEffect
+import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.graphics.Shadow
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.onGloballyPositioned
@@ -95,10 +96,10 @@ fun VideoPlayerView(
 
     Box(
         modifier = modifier
-            .clip(RoundedCornerShape(16.dp))
+            .clip(RectangleShape)
             .background(Color.Black)
-            .border(1.dp, ImmersiveBorder, RoundedCornerShape(16.dp))
-            .shadow(12.dp, RoundedCornerShape(16.dp))
+            .border(1.dp, ImmersiveBorder, RectangleShape)
+            .shadow(12.dp, RectangleShape)
             .clickable { showControls = !showControls }
     ) {
         // 1. ExoPlayer Surface
@@ -259,13 +260,13 @@ fun VideoPlayerView(
                             }
                         }
                         .clickable { onSubtitleTapped() }
-                        .clip(RoundedCornerShape(style.cornerRadiusDp.dp))
+                        .clip(RectangleShape)
                         .background(bgColor)
                         .then(
                             if (isUserDragging) {
-                                Modifier.border(1.5.dp, AccentCyan, RoundedCornerShape(style.cornerRadiusDp.dp))
+                                Modifier.border(1.5.dp, AccentCyan, RectangleShape)
                             } else if (hasDarkBox) {
-                                Modifier.border(1.dp, Color.White.copy(alpha = 0.2f), RoundedCornerShape(style.cornerRadiusDp.dp))
+                                Modifier.border(1.dp, Color.White.copy(alpha = 0.2f), RectangleShape)
                             } else {
                                 Modifier
                             }
@@ -312,7 +313,7 @@ fun VideoPlayerView(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Surface(
-                    shape = RoundedCornerShape(12.dp),
+                    shape = RectangleShape,
                     color = Color.Black.copy(alpha = 0.70f),
                     border = androidx.compose.foundation.BorderStroke(1.dp, Color.White.copy(alpha = 0.15f))
                 ) {
@@ -321,7 +322,7 @@ fun VideoPlayerView(
                         modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp),
                         horizontalArrangement = Arrangement.spacedBy(4.dp)
                     ) {
-                        Box(modifier = Modifier.size(5.dp).background(AccentEmerald, CircleShape))
+                        Box(modifier = Modifier.size(5.dp).background(AccentEmerald, RectangleShape))
                         Text(
                             text = if (playerState.videoWidth > 0) "${playerState.videoWidth}x${playerState.videoHeight}" else "Preview",
                             color = Color.White,
@@ -334,7 +335,7 @@ fun VideoPlayerView(
 
                 if (onToggleFullscreen != null) {
                     Surface(
-                        shape = CircleShape,
+                        shape = RectangleShape,
                         color = Color.Black.copy(alpha = 0.75f),
                         border = androidx.compose.foundation.BorderStroke(1.dp, Color.White.copy(alpha = 0.20f))
                     ) {
@@ -364,7 +365,7 @@ fun VideoPlayerView(
                 .padding(bottom = 6.dp)
         ) {
             Surface(
-                shape = RoundedCornerShape(24.dp),
+                shape = RectangleShape,
                 color = Color.Black.copy(alpha = 0.85f),
                 border = androidx.compose.foundation.BorderStroke(1.dp, Color.White.copy(alpha = 0.18f)),
                 shadowElevation = 8.dp,
@@ -377,7 +378,7 @@ fun VideoPlayerView(
                 ) {
                     // Speed Selector
                     Surface(
-                        shape = RoundedCornerShape(6.dp),
+                        shape = RectangleShape,
                         color = Color.White.copy(alpha = 0.12f),
                         modifier = Modifier.clickable {
                             val nextIdx = (speeds.indexOf(playerState.playbackSpeed) + 1) % speeds.size
@@ -427,11 +428,11 @@ fun VideoPlayerView(
                         Text("-1f", color = AccentCyan, fontSize = 10.sp, fontWeight = FontWeight.Bold)
                     }
 
-                    // Primary Play / Pause Circle
+                    // Primary Play / Pause Button
                     Surface(
-                        shape = CircleShape,
+                        shape = RectangleShape,
                         color = ImmersivePrimary,
-                        modifier = Modifier.size(34.dp)
+                        modifier = Modifier.size(32.dp)
                     ) {
                         IconButton(
                             onClick = { playerController.togglePlayPause() },

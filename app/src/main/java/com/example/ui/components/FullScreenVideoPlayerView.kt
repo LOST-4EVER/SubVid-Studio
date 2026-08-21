@@ -54,6 +54,7 @@ import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.graphics.Shadow
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.input.pointer.pointerInput
@@ -263,13 +264,13 @@ fun FullScreenVideoPlayerView(
                             cueWidthPx = size.width
                             cueHeightPx = size.height
                         }
-                        .clip(RoundedCornerShape(style.cornerRadiusDp.dp))
+                        .clip(RectangleShape)
                         .background(bgColor)
                         .then(
                             if (isUserDragging) {
-                                Modifier.border(1.5.dp, ImmersivePrimary, RoundedCornerShape(style.cornerRadiusDp.dp))
+                                Modifier.border(1.5.dp, ImmersivePrimary, RectangleShape)
                             } else if (hasDarkBox) {
-                                Modifier.border(1.dp, Color.White.copy(alpha = 0.25f), RoundedCornerShape(style.cornerRadiusDp.dp))
+                                Modifier.border(1.dp, Color.White.copy(alpha = 0.25f), RectangleShape)
                             } else Modifier
                         )
                         .padding(
@@ -310,7 +311,7 @@ fun FullScreenVideoPlayerView(
                 .padding(horizontal = 14.dp, vertical = 10.dp)
         ) {
             Surface(
-                shape = RoundedCornerShape(20.dp),
+                shape = RectangleShape,
                 color = Color.Black.copy(alpha = 0.75f),
                 border = androidx.compose.foundation.BorderStroke(1.dp, Color.White.copy(alpha = 0.18f)),
                 shadowElevation = 8.dp
@@ -331,7 +332,7 @@ fun FullScreenVideoPlayerView(
                             onClick = onExitFullscreen,
                             modifier = Modifier
                                 .size(36.dp)
-                                .background(Color.White.copy(alpha = 0.12f), CircleShape)
+                                .background(Color.White.copy(alpha = 0.12f), RectangleShape)
                                 .testTag("fullscreen_exit_back_btn")
                         ) {
                             Icon(
@@ -354,7 +355,7 @@ fun FullScreenVideoPlayerView(
                                 verticalAlignment = Alignment.CenterVertically,
                                 horizontalArrangement = Arrangement.spacedBy(6.dp)
                             ) {
-                                Box(modifier = Modifier.size(6.dp).background(AccentEmerald, CircleShape))
+                                Box(modifier = Modifier.size(6.dp).background(AccentEmerald, RectangleShape))
                                 Text(
                                     text = "${playerState.videoWidth}x${playerState.videoHeight} • ${subtitleTrack.format.name} (${subtitleTrack.cues.size} cues)",
                                     color = Color.White.copy(alpha = 0.70f),
@@ -384,7 +385,7 @@ fun FullScreenVideoPlayerView(
                                 .background(
                                     if (resizeMode == AspectRatioFrameLayout.RESIZE_MODE_ZOOM) ImmersivePrimary.copy(alpha = 0.3f)
                                     else Color.White.copy(alpha = 0.10f),
-                                    CircleShape
+                                    RectangleShape
                                 )
                         ) {
                             Icon(
@@ -400,7 +401,7 @@ fun FullScreenVideoPlayerView(
                             onClick = onOpenPlacementDialog,
                             modifier = Modifier
                                 .size(34.dp)
-                                .background(Color.White.copy(alpha = 0.10f), CircleShape)
+                                .background(Color.White.copy(alpha = 0.10f), RectangleShape)
                         ) {
                             Icon(
                                 imageVector = StudioIcons.Position,
@@ -415,7 +416,7 @@ fun FullScreenVideoPlayerView(
                             onClick = onOpenStyleDialog,
                             modifier = Modifier
                                 .size(34.dp)
-                                .background(Color.White.copy(alpha = 0.10f), CircleShape)
+                                .background(Color.White.copy(alpha = 0.10f), RectangleShape)
                         ) {
                             Icon(
                                 imageVector = StudioIcons.Style,
@@ -430,7 +431,7 @@ fun FullScreenVideoPlayerView(
                             onClick = onOpenSubtitleList,
                             modifier = Modifier
                                 .size(34.dp)
-                                .background(Color.White.copy(alpha = 0.10f), CircleShape)
+                                .background(Color.White.copy(alpha = 0.10f), RectangleShape)
                         ) {
                             Icon(
                                 imageVector = StudioIcons.Layers,
@@ -461,7 +462,7 @@ fun FullScreenVideoPlayerView(
             ) {
                 // Timecode & Progress Slider Card
                 Surface(
-                    shape = RoundedCornerShape(18.dp),
+                    shape = RectangleShape,
                     color = Color.Black.copy(alpha = 0.80f),
                     border = androidx.compose.foundation.BorderStroke(1.dp, Color.White.copy(alpha = 0.18f)),
                     modifier = Modifier.fillMaxWidth()
@@ -527,7 +528,7 @@ fun FullScreenVideoPlayerView(
 
                 // Floating Glass Controller Pill
                 Surface(
-                    shape = RoundedCornerShape(32.dp),
+                    shape = RectangleShape,
                     color = Color.Black.copy(alpha = 0.90f),
                     border = androidx.compose.foundation.BorderStroke(1.dp, Color.White.copy(alpha = 0.22f)),
                     shadowElevation = 14.dp
@@ -539,7 +540,7 @@ fun FullScreenVideoPlayerView(
                     ) {
                         // Speed Selector
                         Surface(
-                            shape = RoundedCornerShape(8.dp),
+                            shape = RectangleShape,
                             color = Color.White.copy(alpha = 0.12f),
                             modifier = Modifier.clickable {
                                 val nextIdx = (speeds.indexOf(playerState.playbackSpeed) + 1) % speeds.size
@@ -594,11 +595,11 @@ fun FullScreenVideoPlayerView(
                             )
                         }
 
-                        // Main Play / Pause Circle
+                        // Main Play / Pause Button
                         Surface(
-                            shape = CircleShape,
+                            shape = RectangleShape,
                             color = ImmersivePrimary,
-                            modifier = Modifier.size(44.dp)
+                            modifier = Modifier.size(40.dp)
                         ) {
                             IconButton(
                                 onClick = { playerController.togglePlayPause() },

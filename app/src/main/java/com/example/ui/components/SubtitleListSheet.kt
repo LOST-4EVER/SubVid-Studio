@@ -39,6 +39,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
@@ -82,6 +83,7 @@ fun SubtitleListSheet(
     ModalBottomSheet(
         onDismissRequest = onDismiss,
         sheetState = sheetState,
+        shape = RectangleShape,
         containerColor = ImmersiveSurface,
         scrimColor = Color.Black.copy(alpha = 0.65f),
         dragHandle = {
@@ -89,7 +91,6 @@ fun SubtitleListSheet(
                 modifier = Modifier
                     .padding(vertical = 12.dp)
                     .size(width = 40.dp, height = 4.dp)
-                    .clip(RoundedCornerShape(2.dp))
                     .background(ImmersiveBorder)
             )
         },
@@ -115,7 +116,7 @@ fun SubtitleListSheet(
                     Box(
                         modifier = Modifier
                             .size(36.dp)
-                            .background(ImmersivePrimary.copy(alpha = 0.2f), CircleShape),
+                            .background(ImmersivePrimary.copy(alpha = 0.2f), RectangleShape),
                         contentAlignment = Alignment.Center
                     ) {
                         Icon(StudioIcons.Subtitles, contentDescription = null, tint = ImmersivePrimary, modifier = Modifier.size(20.dp))
@@ -132,7 +133,7 @@ fun SubtitleListSheet(
                         containerColor = ImmersivePrimary,
                         contentColor = ImmersiveOnPrimary
                     ),
-                    shape = RoundedCornerShape(10.dp),
+                    shape = RectangleShape,
                     modifier = Modifier.testTag("add_new_cue_btn")
                 ) {
                     Icon(StudioIcons.Add, contentDescription = null, modifier = Modifier.size(16.dp))
@@ -160,13 +161,13 @@ fun SubtitleListSheet(
                         focusedContainerColor = ImmersiveBg,
                         unfocusedContainerColor = ImmersiveBg
                     ),
-                    shape = RoundedCornerShape(12.dp),
+                    shape = RectangleShape,
                     modifier = Modifier.weight(1f).height(50.dp)
                 )
 
                 // Quick shift all subtitles -500ms / +500ms (Audio Sync feature)
                 Surface(
-                    shape = RoundedCornerShape(10.dp),
+                    shape = RectangleShape,
                     color = ImmersiveActionBg,
                     modifier = Modifier.clickable { onBatchShiftTiming(-500L) }
                 ) {
@@ -174,7 +175,7 @@ fun SubtitleListSheet(
                 }
 
                 Surface(
-                    shape = RoundedCornerShape(10.dp),
+                    shape = RectangleShape,
                     color = ImmersiveActionBg,
                     modifier = Modifier.clickable { onBatchShiftTiming(500L) }
                 ) {
@@ -199,7 +200,7 @@ fun SubtitleListSheet(
                     val isEditing = editingCueId == cue.id
 
                     Surface(
-                        shape = RoundedCornerShape(14.dp),
+                        shape = RectangleShape,
                         color = if (isSelected) ImmersivePrimary.copy(alpha = 0.15f) else ImmersiveSurfaceCard,
                         border = androidx.compose.foundation.BorderStroke(
                             1.dp,
@@ -292,7 +293,7 @@ fun SubtitleListSheet(
                                         focusedContainerColor = ImmersiveBg,
                                         unfocusedContainerColor = ImmersiveBg
                                     ),
-                                    shape = RoundedCornerShape(8.dp),
+                                    shape = RectangleShape,
                                     modifier = Modifier.fillMaxWidth()
                                 )
                             } else {

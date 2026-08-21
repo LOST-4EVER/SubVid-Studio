@@ -35,6 +35,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -72,7 +73,7 @@ fun SettingsScreen(
         // 1. Header
         item {
             Surface(
-                shape = RoundedCornerShape(16.dp),
+                shape = RectangleShape,
                 color = ImmersiveSurface,
                 border = androidx.compose.foundation.BorderStroke(1.dp, ImmersiveBorder),
                 modifier = Modifier.fillMaxWidth()
@@ -87,7 +88,6 @@ fun SettingsScreen(
                     Box(
                         modifier = Modifier
                             .size(36.dp)
-                            .clip(RoundedCornerShape(8.dp))
                             .background(ImmersivePrimary.copy(alpha = 0.15f)),
                         contentAlignment = Alignment.Center
                     ) {
@@ -123,7 +123,7 @@ fun SettingsScreen(
             Spacer(Modifier.height(6.dp))
 
             Card(
-                shape = RoundedCornerShape(14.dp),
+                shape = RectangleShape,
                 colors = CardDefaults.cardColors(containerColor = ImmersiveSurface),
                 border = androidx.compose.foundation.BorderStroke(1.dp, ImmersiveCardBorder),
                 modifier = Modifier.fillMaxWidth()
@@ -138,7 +138,6 @@ fun SettingsScreen(
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .clip(RoundedCornerShape(10.dp))
                             .background(if (settings.engine == ProcessingEngine.GPU_HARDWARE) ImmersiveActionBg else Color.Transparent)
                             .clickable { viewModel.updateProcessingSettings(settings.copy(engine = ProcessingEngine.GPU_HARDWARE)) }
                             .padding(10.dp),
@@ -163,7 +162,7 @@ fun SettingsScreen(
                                     fontWeight = FontWeight.Bold
                                 )
                                 Surface(
-                                    shape = RoundedCornerShape(4.dp),
+                                    shape = RectangleShape,
                                     color = AccentCyan.copy(alpha = 0.2f)
                                 ) {
                                     Text(
@@ -188,7 +187,6 @@ fun SettingsScreen(
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .clip(RoundedCornerShape(10.dp))
                             .background(if (settings.engine == ProcessingEngine.CPU_MULTITHREAD) ImmersiveActionBg else Color.Transparent)
                             .clickable { viewModel.updateProcessingSettings(settings.copy(engine = ProcessingEngine.CPU_MULTITHREAD)) }
                             .padding(10.dp),
@@ -238,7 +236,7 @@ fun SettingsScreen(
                             ) {
                                 listOf(2, 4, 8).forEach { count ->
                                     Surface(
-                                        shape = RoundedCornerShape(8.dp),
+                                        shape = RectangleShape,
                                         color = if (settings.cpuThreads == count) ImmersivePrimary else ImmersiveActionBg,
                                         modifier = Modifier
                                             .weight(1f)
@@ -273,7 +271,7 @@ fun SettingsScreen(
             Spacer(Modifier.height(6.dp))
 
             Card(
-                shape = RoundedCornerShape(14.dp),
+                shape = RectangleShape,
                 colors = CardDefaults.cardColors(containerColor = ImmersiveSurface),
                 border = androidx.compose.foundation.BorderStroke(1.dp, ImmersiveCardBorder),
                 modifier = Modifier.fillMaxWidth()
@@ -299,7 +297,7 @@ fun SettingsScreen(
                             listOf("mp4", "mkv").forEach { ext ->
                                 val selected = settings.defaultExportContainer.equals(ext, ignoreCase = true)
                                 Surface(
-                                    shape = RoundedCornerShape(6.dp),
+                                    shape = RectangleShape,
                                     color = if (selected) AccentCyan else ImmersiveActionBg,
                                     modifier = Modifier.clickable {
                                         viewModel.updateProcessingSettings(settings.copy(defaultExportContainer = ext))
@@ -332,7 +330,7 @@ fun SettingsScreen(
                             listOf(30, 60).forEach { fps ->
                                 val selected = settings.targetFps == fps
                                 Surface(
-                                    shape = RoundedCornerShape(6.dp),
+                                    shape = RectangleShape,
                                     color = if (selected) AccentCyan else ImmersiveActionBg,
                                     modifier = Modifier.clickable {
                                         viewModel.updateProcessingSettings(settings.copy(targetFps = fps))
@@ -362,7 +360,7 @@ fun SettingsScreen(
                         }
 
                         Surface(
-                            shape = RoundedCornerShape(6.dp),
+                            shape = RectangleShape,
                             color = ImmersiveActionBg
                         ) {
                             Text(
@@ -429,7 +427,7 @@ fun SettingsScreen(
         // 4. App Info & Zero Demo Status
         item {
             Card(
-                shape = RoundedCornerShape(14.dp),
+                shape = RectangleShape,
                 colors = CardDefaults.cardColors(containerColor = ImmersiveSurfaceCard),
                 border = androidx.compose.foundation.BorderStroke(1.dp, ImmersiveBorder),
                 modifier = Modifier.fillMaxWidth()

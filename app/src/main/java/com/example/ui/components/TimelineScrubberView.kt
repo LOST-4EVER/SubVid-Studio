@@ -38,6 +38,7 @@ import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.testTag
@@ -114,9 +115,9 @@ fun TimelineScrubberView(
     Column(
         modifier = modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(20.dp))
+            .clip(RectangleShape)
             .background(ImmersiveSurface)
-            .border(1.dp, ImmersiveBorder, RoundedCornerShape(20.dp))
+            .border(1.dp, ImmersiveBorder, RectangleShape)
             .padding(14.dp),
         verticalArrangement = Arrangement.spacedBy(10.dp)
     ) {
@@ -133,7 +134,7 @@ fun TimelineScrubberView(
                 Box(
                     modifier = Modifier
                         .size(8.dp)
-                        .background(AccentCyan, CircleShape)
+                        .background(AccentCyan, RectangleShape)
                 )
                 Text(
                     text = "TIMELINE • ${subtitleTrack.format.extension.uppercase()} (${subtitleTrack.cues.size} CUES)",
@@ -151,7 +152,7 @@ fun TimelineScrubberView(
             ) {
                 // Magnet Snap Toggle
                 Surface(
-                    shape = RoundedCornerShape(6.dp),
+                    shape = RectangleShape,
                     color = if (isSnapToGridEnabled) AccentCyan.copy(alpha = 0.2f) else ImmersiveActionBg,
                     border = androidx.compose.foundation.BorderStroke(1.dp, if (isSnapToGridEnabled) AccentCyan else ImmersiveBorder),
                     modifier = Modifier.clickable { isSnapToGridEnabled = !isSnapToGridEnabled }
@@ -168,7 +169,7 @@ fun TimelineScrubberView(
                 zoomOptions.forEach { zoom ->
                     val isSelected = zoomLevel == zoom
                     Surface(
-                        shape = RoundedCornerShape(6.dp),
+                        shape = RectangleShape,
                         color = if (isSelected) ImmersivePrimary else ImmersiveActionBg,
                         modifier = Modifier.clickable { zoomLevel = zoom }
                     ) {
@@ -200,7 +201,7 @@ fun TimelineScrubberView(
 
             if (activeDragMode != DragMode.NONE && dragFeedbackMessage.isNotEmpty()) {
                 Surface(
-                    shape = RoundedCornerShape(12.dp),
+                    shape = RectangleShape,
                     color = AccentCyan.copy(alpha = 0.20f),
                     border = androidx.compose.foundation.BorderStroke(1.dp, AccentCyan)
                 ) {
@@ -245,9 +246,9 @@ fun TimelineScrubberView(
                 modifier = Modifier
                     .width(canvasWidth)
                     .height(84.dp)
-                    .clip(RoundedCornerShape(12.dp))
+                    .clip(RectangleShape)
                     .background(ImmersiveBg)
-                    .border(1.dp, ImmersiveBorder, RoundedCornerShape(12.dp))
+                    .border(1.dp, ImmersiveBorder, RectangleShape)
                     .pointerInput(totalDuration, subtitleTrack.cues, selectedCue) {
                         detectTapGestures { offset ->
                             val widthPx = size.width.toFloat()
@@ -472,38 +473,32 @@ fun TimelineScrubberView(
                     else if (isActive) accentCyan
                     else primaryColor.copy(alpha = 0.45f)
 
-                    val corner = CornerRadius(6f, 6f)
-
                     // Draw block background
-                    drawRoundRect(
+                    drawRect(
                         color = fillColor,
                         topLeft = Offset(startX, cueTrackTop),
-                        size = Size(blockWidth, cueTrackHeight),
-                        cornerRadius = corner
+                        size = Size(blockWidth, cueTrackHeight)
                     )
 
                     // Draw block border
-                    drawRoundRect(
+                    drawRect(
                         color = strokeColor,
                         topLeft = Offset(startX, cueTrackTop),
                         size = Size(blockWidth, cueTrackHeight),
-                        cornerRadius = corner,
                         style = Stroke(width = if (isSelected) 2.5f else 1.2f)
                     )
 
                     // If selected, draw trim handle grips on left and right
                     if (isSelected) {
-                        drawRoundRect(
+                        drawRect(
                             color = Color.White,
                             topLeft = Offset(startX, cueTrackTop + 4f),
-                            size = Size(4f, cueTrackHeight - 8f),
-                            cornerRadius = CornerRadius(2f, 2f)
+                            size = Size(4f, cueTrackHeight - 8f)
                         )
-                        drawRoundRect(
+                        drawRect(
                             color = Color.White,
                             topLeft = Offset(startX + blockWidth - 4f, cueTrackTop + 4f),
-                            size = Size(4f, cueTrackHeight - 8f),
-                            cornerRadius = CornerRadius(2f, 2f)
+                            size = Size(4f, cueTrackHeight - 8f)
                         )
                     }
 
@@ -539,15 +534,15 @@ fun TimelineScrubberView(
                     end = Offset(playheadX, heightPx),
                     strokeWidth = 3f
                 )
-                drawCircle(
+                drawRect(
                     color = primaryColor,
-                    radius = 6f,
-                    center = Offset(playheadX, rulerHeight)
+                    topLeft = Offset(playheadX - 4f, rulerHeight - 4f),
+                    size = Size(8f, 8f)
                 )
-                drawCircle(
+                drawRect(
                     color = Color.White,
-                    radius = 3f,
-                    center = Offset(playheadX, rulerHeight)
+                    topLeft = Offset(playheadX - 2f, rulerHeight - 2f),
+                    size = Size(4f, 4f)
                 )
             }
         }
@@ -555,7 +550,7 @@ fun TimelineScrubberView(
         // 3. Selected Cue Quick Timeline Action Bar
         if (selectedCue != null) {
             Surface(
-                shape = RoundedCornerShape(12.dp),
+                shape = RectangleShape,
                 color = ImmersiveSurfaceCard,
                 border = androidx.compose.foundation.BorderStroke(1.dp, ImmersiveCardBorder),
                 modifier = Modifier.fillMaxWidth()
@@ -594,7 +589,7 @@ fun TimelineScrubberView(
                             verticalAlignment = Alignment.CenterVertically
                         ) {
                             Surface(
-                                shape = RoundedCornerShape(6.dp),
+                                shape = RectangleShape,
                                 color = ImmersiveActionBg,
                                 modifier = Modifier
                                     .clickable { onSetCueStartTime(selectedCue, currentPositionMs) }
@@ -610,7 +605,7 @@ fun TimelineScrubberView(
                             }
 
                             Surface(
-                                shape = RoundedCornerShape(6.dp),
+                                shape = RectangleShape,
                                 color = ImmersiveActionBg,
                                 modifier = Modifier
                                     .clickable { onSetCueEndTime(selectedCue, currentPositionMs) }
@@ -636,7 +631,7 @@ fun TimelineScrubberView(
                     ) {
                         // Split
                         Surface(
-                            shape = RoundedCornerShape(6.dp),
+                            shape = RectangleShape,
                             color = ImmersiveActionBg,
                             modifier = Modifier
                                 .weight(1f)
@@ -650,7 +645,7 @@ fun TimelineScrubberView(
 
                         // Add
                         Surface(
-                            shape = RoundedCornerShape(6.dp),
+                            shape = RectangleShape,
                             color = ImmersiveActionBg,
                             modifier = Modifier
                                 .weight(1f)
@@ -664,7 +659,7 @@ fun TimelineScrubberView(
 
                         // -0.1s Nudge
                         Surface(
-                            shape = RoundedCornerShape(6.dp),
+                            shape = RectangleShape,
                             color = ImmersiveActionBg,
                             modifier = Modifier
                                 .weight(1f)
@@ -677,7 +672,7 @@ fun TimelineScrubberView(
 
                         // +0.1s Nudge
                         Surface(
-                            shape = RoundedCornerShape(6.dp),
+                            shape = RectangleShape,
                             color = ImmersiveActionBg,
                             modifier = Modifier
                                 .weight(1f)

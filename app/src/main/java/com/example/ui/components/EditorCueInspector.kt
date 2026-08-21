@@ -17,6 +17,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Icon
@@ -72,7 +73,7 @@ fun EditorCueInspector(
     if (selectedCue == null || totalCuesCount == 0) {
         // Empty State: No cues in track
         Surface(
-            shape = RoundedCornerShape(16.dp),
+            shape = RectangleShape,
             color = ImmersiveSurface,
             border = androidx.compose.foundation.BorderStroke(1.dp, ImmersiveBorder),
             modifier = modifier.fillMaxWidth()
@@ -86,8 +87,7 @@ fun EditorCueInspector(
             ) {
                 Box(
                     modifier = Modifier
-                        .size(44.dp)
-                        .clip(CircleShape)
+                        .size(40.dp)
                         .background(ImmersiveActionBg),
                     contentAlignment = Alignment.Center
                 ) {
@@ -119,7 +119,7 @@ fun EditorCueInspector(
                         containerColor = ImmersivePrimary,
                         contentColor = ImmersiveOnPrimary
                     ),
-                    shape = RoundedCornerShape(10.dp),
+                    shape = RectangleShape,
                     modifier = Modifier.testTag("add_first_cue_btn")
                 ) {
                     Icon(StudioIcons.Add, contentDescription = null, modifier = Modifier.size(16.dp))
@@ -143,7 +143,7 @@ fun EditorCueInspector(
     )
 
     Surface(
-        shape = RoundedCornerShape(16.dp),
+        shape = RectangleShape,
         color = ImmersiveSurface,
         border = androidx.compose.foundation.BorderStroke(1.dp, ImmersiveBorder),
         modifier = modifier.fillMaxWidth()
@@ -169,7 +169,7 @@ fun EditorCueInspector(
                         onClick = onSelectPreviousCue,
                         modifier = Modifier
                             .size(36.dp)
-                            .background(ImmersiveActionBg, RoundedCornerShape(8.dp))
+                            .background(ImmersiveActionBg, RectangleShape)
                             .testTag("inspector_prev_cue_btn")
                     ) {
                         Icon(
@@ -211,7 +211,7 @@ fun EditorCueInspector(
                         onClick = onSelectNextCue,
                         modifier = Modifier
                             .size(36.dp)
-                            .background(ImmersiveActionBg, RoundedCornerShape(8.dp))
+                            .background(ImmersiveActionBg, RectangleShape)
                             .testTag("inspector_next_cue_btn")
                     ) {
                         Icon(
@@ -230,7 +230,7 @@ fun EditorCueInspector(
                 ) {
                     // Quick jump to cue
                     Surface(
-                        shape = RoundedCornerShape(8.dp),
+                        shape = RectangleShape,
                         color = ImmersiveActionBg,
                         modifier = Modifier
                             .clickable { onJumpToCue(selectedCue) }
@@ -251,7 +251,7 @@ fun EditorCueInspector(
                         onClick = onDuplicateCue,
                         modifier = Modifier
                             .size(32.dp)
-                            .background(ImmersiveActionBg, RoundedCornerShape(8.dp))
+                            .background(ImmersiveActionBg, RectangleShape)
                             .testTag("duplicate_cue_btn")
                     ) {
                         Icon(StudioIcons.Copy, contentDescription = "Duplicate Cue", tint = AccentEmerald, modifier = Modifier.size(14.dp))
@@ -262,7 +262,7 @@ fun EditorCueInspector(
                         onClick = onDeleteCue,
                         modifier = Modifier
                             .size(32.dp)
-                            .background(ImmersiveActionBg, RoundedCornerShape(8.dp))
+                            .background(ImmersiveActionBg, RectangleShape)
                             .testTag("delete_cue_btn")
                     ) {
                         Icon(StudioIcons.Delete, contentDescription = "Delete Cue", tint = AccentRose, modifier = Modifier.size(14.dp))
@@ -287,7 +287,7 @@ fun EditorCueInspector(
                     focusedContainerColor = ImmersiveBg,
                     unfocusedContainerColor = ImmersiveBg
                 ),
-                shape = RoundedCornerShape(12.dp),
+                shape = RectangleShape,
                 modifier = Modifier
                     .fillMaxWidth()
                     .testTag("cue_text_input")
@@ -301,7 +301,7 @@ fun EditorCueInspector(
             ) {
                 // Bold Toggle for this single cue
                 Surface(
-                    shape = RoundedCornerShape(8.dp),
+                    shape = RectangleShape,
                     color = if (style.isBold) ImmersivePrimary else ImmersiveActionBg,
                     modifier = Modifier
                         .clickable {
@@ -332,7 +332,7 @@ fun EditorCueInspector(
 
                 // Italic Toggle for this single cue
                 Surface(
-                    shape = RoundedCornerShape(8.dp),
+                    shape = RectangleShape,
                     color = if (style.isItalic) ImmersivePrimary else ImmersiveActionBg,
                     modifier = Modifier
                         .clickable {
@@ -363,7 +363,7 @@ fun EditorCueInspector(
 
                 // Dark Background Box Toggle for this single cue
                 Surface(
-                    shape = RoundedCornerShape(8.dp),
+                    shape = RectangleShape,
                     color = if (hasDarkBg) ImmersivePrimary else ImmersiveActionBg,
                     modifier = Modifier
                         .clickable {
@@ -381,8 +381,8 @@ fun EditorCueInspector(
                         Box(
                             modifier = Modifier
                                 .size(12.dp)
-                                .background(if (hasDarkBg) Color.Black else Color.Gray, RoundedCornerShape(2.dp))
-                                .border(1.dp, Color.White, RoundedCornerShape(2.dp))
+                                .background(if (hasDarkBg) Color.Black else Color.Gray, RectangleShape)
+                                .border(1.dp, Color.White, RectangleShape)
                         )
                         Text(
                             text = if (hasDarkBg) "Box: On" else "Box: Off",
@@ -399,12 +399,11 @@ fun EditorCueInspector(
                     Box(
                         modifier = Modifier
                             .size(28.dp)
-                            .clip(CircleShape)
-                            .background(Color(colorVal))
+                            .background(Color(colorVal), RectangleShape)
                             .border(
                                 width = if (isSelected) 2.5.dp else 1.dp,
                                 color = if (isSelected) ImmersivePrimary else Color.Gray,
-                                shape = CircleShape
+                                shape = RectangleShape
                             )
                             .clickable {
                                 val updated = style.copy(textColorArgb = colorVal)

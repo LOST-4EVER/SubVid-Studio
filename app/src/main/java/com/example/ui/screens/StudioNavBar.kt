@@ -1,19 +1,24 @@
 package com.example.ui.screens
 
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Icon
-import androidx.compose.material3.NavigationBar
-import androidx.compose.material3.NavigationBarItem
-import androidx.compose.material3.NavigationBarItemDefaults
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -23,63 +28,87 @@ import com.example.ui.icons.StudioIcons
 import com.example.ui.theme.ImmersiveBorder
 import com.example.ui.theme.ImmersivePrimary
 import com.example.ui.theme.ImmersiveSurface
+import com.example.ui.theme.ImmersiveTextMuted
 import com.example.ui.theme.ImmersiveTextSecondary
 
 @Composable
 fun StudioNavBar(
     currentTab: AppTab,
     onTabSelected: (AppTab) -> Unit,
+    hasActiveProject: Boolean = false,
     modifier: Modifier = Modifier
 ) {
     Surface(
-        shape = RoundedCornerShape(topStart = 20.dp, topEnd = 20.dp),
+        shape = RectangleShape,
         color = ImmersiveSurface,
         border = androidx.compose.foundation.BorderStroke(1.dp, ImmersiveBorder),
-        tonalElevation = 8.dp,
         modifier = modifier.fillMaxWidth()
     ) {
-        NavigationBar(
-            containerColor = Color.Transparent, // Let Surface handle background
-            tonalElevation = 0.dp,
+        Row(
             modifier = Modifier
                 .fillMaxWidth()
                 .navigationBarsPadding()
-                .height(68.dp)
+                .height(58.dp),
+            horizontalArrangement = Arrangement.SpaceEvenly,
+            verticalAlignment = Alignment.CenterVertically
         ) {
             val items = listOf(
                 NavigationItemData("Home", StudioIcons.Home, AppTab.HOME, "nav_home"),
+                NavigationItemData("Editor", StudioIcons.Video, AppTab.EDITOR, "nav_editor"),
                 NavigationItemData("Batch Hub", StudioIcons.BatchQueue, AppTab.BATCH, "nav_batch"),
                 NavigationItemData("Settings", StudioIcons.Settings, AppTab.SETTINGS, "nav_settings")
             )
 
             items.forEach { item ->
                 val selected = currentTab == item.tab
-                NavigationBarItem(
-                    selected = selected,
-                    onClick = { onTabSelected(item.tab) },
-                    icon = {
-                        Icon(
-                            imageVector = item.icon,
-                            contentDescription = item.title,
-                            modifier = Modifier.size(20.dp)
+                Box(
+                    modifier = Modifier
+                        .weight(1f)
+                        .fillMaxHeight()
+                        .background(if (selected) ImmersivePrimary.copy(alpha = 0.12f) else Color.Transparent)
+                        .clickable { onTabSelected(item.tab) }
+                        .testTag(item.testTag),
+                    contentAlignment = Alignment.Center
+                ) {
+                    // Top active border indicator
+                    if (selected) {
+                        Box(
+                            modifier = Modifier
+                                .align(Alignment.TopCenter)
+                                .fillMaxWidth()
+                                .height(2.dp)
+                                .background(ImmersivePrimary)
                         )
-                    },
-                    label = {
+                    }
+
+                    Column(
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.spacedBy(3.dp)
+                    ) {
+                        Box {
+                            Icon(
+                                imageVector = item.icon,
+                                contentDescription = item.title,
+                                tint = if (selected) ImmersivePrimary else ImmersiveTextSecondary,
+                                modifier = Modifier.size(20.dp)
+                            )
+                            if (item.tab == AppTab.EDITOR && hasActiveProject && !selected) {
+                                Box(
+                                    modifier = Modifier
+                                        .align(Alignment.TopEnd)
+                                        .size(6.dp)
+                                        .background(ImmersivePrimary, RectangleShape)
+                                )
+                            }
+                        }
                         Text(
                             text = item.title,
-                            fontSize = 11.sp,
-                            fontWeight = if (selected) FontWeight.Bold else FontWeight.Normal
+                            fontSize = 10.sp,
+                            fontWeight = if (selected) FontWeight.Bold else FontWeight.Medium,
+                            color = if (selected) ImmersivePrimary else ImmersiveTextMuted
                         )
-                    },
-                    colors = NavigationBarItemDefaults.colors(
-                        selectedIconColor = Color.Black,
-                        selectedTextColor = ImmersivePrimary,
-                        indicatorColor = ImmersivePrimary,
-                        unselectedIconColor = ImmersiveTextSecondary,
-                        unselectedTextColor = ImmersiveTextSecondary
-                    ),
-                    modifier = Modifier.testTag(item.testTag)
-                )
+                    }
+                }
             }
         }
     }
@@ -91,3 +120,4 @@ private data class NavigationItemData(
     val tab: AppTab,
     val testTag: String
 )
+

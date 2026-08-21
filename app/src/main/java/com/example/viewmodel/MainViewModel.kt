@@ -133,6 +133,12 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     fun setTab(tab: AppTab) {
+        if (tab != AppTab.EDITOR && playerState.value.isPlaying) {
+            playerController.pause()
+        }
+        if (_videoMetadata.value.uriString.isNotEmpty() || _subtitleTrack.value.cues.isNotEmpty()) {
+            saveCurrentProject()
+        }
         _currentTab.value = tab
     }
 
@@ -156,6 +162,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         val newProj = StudioProject(
             id = UUID.randomUUID().toString(),
             name = name,
+            subtitleTrack = SubtitleTrack(title = name, format = SubtitleFormat.SRT, cues = emptyList()),
             lastModifiedMs = System.currentTimeMillis()
         )
         projectRepository.saveProject(newProj)
@@ -164,24 +171,25 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     fun openProject(project: StudioProject) {
-        _activeProject.value = project
+        // Fetch full fresh project instance with loaded cues from repository if available
+        val fullProject = projectRepository.getProjectById(project.id) ?: project
+        _activeProject.value = fullProject
         _videoMetadata.value = VideoMetadata(
-            uriString = project.videoUriString,
-            fileName = project.videoFileName,
-            durationMs = project.videoDurationMs
+            uriString = fullProject.videoUriString,
+            fileName = fullProject.videoFileName,
+            durationMs = fullProject.videoDurationMs
         )
-        _subtitleTrack.value = SubtitleTrack(
-            title = project.name,
-            format = project.subtitleFormat,
-            cues = emptyList()
-        )
-        _selectedCue.value = null
+        _subtitleTrack.value = fullProject.subtitleTrack
+        _selectedCue.value = fullProject.subtitleTrack.cues.firstOrNull()
         _activeCue.value = null
 
-        if (project.videoUriString.isNotEmpty()) {
+        if (fullProject.videoUriString.isNotEmpty()) {
             try {
-                val uri = Uri.parse(project.videoUriString)
+                val uri = Uri.parse(fullProject.videoUriString)
                 playerController.loadMedia(uri)
+                if (fullProject.currentPositionMs > 0) {
+                    playerController.seekTo(fullProject.currentPositionMs)
+                }
             } catch (e: Exception) {
                 Log.e("MainViewModel", "Could not load project video URI", e)
             }
@@ -196,21 +204,40 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             _videoMetadata.value = VideoMetadata(uriString = "", fileName = "", durationMs = 0L)
             _subtitleTrack.value = SubtitleTrack()
             _selectedCue.value = null
+            _activeCue.value = null
+            playerController.unloadMedia()
         }
         refreshProjects()
     }
 
     fun saveCurrentProject() {
+        val currentTrack = _subtitleTrack.value
+        val currentMeta = _videoMetadata.value
+        val fallbackName = when {
+            currentTrack.title.isNotBlank() && currentTrack.title != "Untitled Track" && currentTrack.title != "Empty Subtitle Track" -> currentTrack.title
+            currentMeta.fileName.isNotBlank() && currentMeta.fileName != "No Video" && currentMeta.fileName != "Video File" -> currentMeta.fileName
+            else -> "Project ${_projects.value.size + 1}"
+        }
+
         val current = _activeProject.value ?: StudioProject(
-            name = _videoMetadata.value.fileName.ifEmpty { "Project ${_projects.value.size + 1}" }
+            id = UUID.randomUUID().toString(),
+            name = fallbackName
         )
+
+        val playerDuration = playerState.value.durationMs
+        val resolvedDuration = if (playerDuration > 0) playerDuration else currentMeta.durationMs
+        val currentPos = playerState.value.currentPositionMs
+
         val updated = current.copy(
-            videoUriString = _videoMetadata.value.uriString,
-            videoFileName = _videoMetadata.value.fileName,
-            videoDurationMs = _videoMetadata.value.durationMs,
-            subtitleFileName = _subtitleTrack.value.title,
-            subtitleFormat = _subtitleTrack.value.format,
-            cueCount = _subtitleTrack.value.cues.size,
+            name = fallbackName,
+            videoUriString = currentMeta.uriString,
+            videoFileName = currentMeta.fileName.ifEmpty { current.videoFileName },
+            videoDurationMs = resolvedDuration,
+            currentPositionMs = currentPos,
+            subtitleFileName = currentTrack.title.ifEmpty { current.subtitleFileName },
+            subtitleFormat = currentTrack.format,
+            cueCount = currentTrack.cues.size,
+            subtitleTrack = currentTrack,
             lastModifiedMs = System.currentTimeMillis()
         )
         _activeProject.value = updated
@@ -415,6 +442,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                 }
             }
         }
+        saveCurrentProject()
     }
 
     fun updateSubtitleStyle(style: SubtitleStyle, applyToAll: Boolean) {
@@ -439,6 +467,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                 }
             }
         }
+        saveCurrentProject()
     }
 
     fun updateCueText(cue: SubtitleCue, newText: String) {
@@ -452,6 +481,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         if (_activeCue.value?.id == cue.id) {
             _activeCue.value = _activeCue.value?.copy(text = newText)
         }
+        saveCurrentProject()
     }
 
     fun setCueStartTime(cue: SubtitleCue, newStartMs: Long) {
@@ -462,6 +492,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         }.sortedBy { it.startTimeMs }
         _subtitleTrack.update { it.copy(cues = updatedCues) }
         _selectedCue.value = updatedCue
+        saveCurrentProject()
     }
 
     fun setCueEndTime(cue: SubtitleCue, newEndMs: Long) {
@@ -473,6 +504,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         }.sortedBy { it.startTimeMs }
         _subtitleTrack.update { it.copy(cues = updatedCues) }
         _selectedCue.value = updatedCue
+        saveCurrentProject()
     }
 
     fun shiftCueTiming(cue: SubtitleCue, deltaMs: Long) {
@@ -485,6 +517,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         }.sortedBy { it.startTimeMs }
         _subtitleTrack.update { it.copy(cues = updatedCues) }
         _selectedCue.value = updatedCue
+        saveCurrentProject()
     }
 
     fun nudgeTiming(deltaStartMs: Long, deltaEndMs: Long) {
@@ -498,6 +531,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         }.sortedBy { it.startTimeMs }
         _subtitleTrack.update { it.copy(cues = updatedCues) }
         _selectedCue.value = updatedCue
+        saveCurrentProject()
     }
 
     fun batchShiftTiming(deltaMs: Long) {
@@ -511,6 +545,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         _selectedCue.value?.let { current ->
             _selectedCue.value = updatedCues.firstOrNull { it.id == current.id }
         }
+        saveCurrentProject()
         _toastMessage.value = "Shifted all cues by ${if (deltaMs >= 0) "+$deltaMs" else "$deltaMs"}ms"
     }
 
@@ -530,6 +565,8 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         val newCues = (_subtitleTrack.value.cues + newCue).sortedBy { it.startTimeMs }
         _subtitleTrack.update { it.copy(cues = newCues) }
         _selectedCue.value = newCue
+        _activeCue.value = newCue
+        saveCurrentProject()
     }
 
     fun splitCueAtCurrentPosition() {
@@ -558,6 +595,8 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         val sortedCues = updatedCues.sortedBy { it.startTimeMs }
         _subtitleTrack.update { it.copy(cues = sortedCues) }
         _selectedCue.value = secondPart
+        _activeCue.value = secondPart
+        saveCurrentProject()
     }
 
     fun duplicateSelectedCue() {
@@ -571,7 +610,9 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         val newCues = (_subtitleTrack.value.cues + newCue).sortedBy { it.startTimeMs }
         _subtitleTrack.update { it.copy(cues = newCues) }
         _selectedCue.value = newCue
+        _activeCue.value = newCue
         playerController.seekTo(newCue.startTimeMs)
+        saveCurrentProject()
     }
 
     fun deleteSelectedCue() {
@@ -579,6 +620,10 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         val updatedCues = _subtitleTrack.value.cues.filter { it.id != target.id }
         _subtitleTrack.update { it.copy(cues = updatedCues) }
         _selectedCue.value = updatedCues.firstOrNull()
+        if (_activeCue.value?.id == target.id) {
+            _activeCue.value = _selectedCue.value
+        }
+        saveCurrentProject()
     }
 
     fun deleteCue(cue: SubtitleCue) {
@@ -587,10 +632,17 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         if (_selectedCue.value?.id == cue.id) {
             _selectedCue.value = updatedCues.firstOrNull()
         }
+        if (_activeCue.value?.id == cue.id) {
+            _activeCue.value = _selectedCue.value
+        }
+        saveCurrentProject()
     }
 
     fun startExport(config: ExportConfig) {
         viewModelScope.launch {
+            if (playerState.value.isPlaying) {
+                playerController.pause()
+            }
             val uri = Uri.parse(_videoMetadata.value.uriString.ifEmpty { "android.resource://dummy" })
             exportManager.export(
                 videoUri = uri,
@@ -649,10 +701,25 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         _processingSettings.value = settings
     }
 
-    fun setShowPlacementDialog(show: Boolean) { _showPlacementDialog.value = show }
-    fun setShowStyleDialog(show: Boolean) { _showStyleDialog.value = show }
-    fun setShowExportDialog(show: Boolean) { _showExportDialog.value = show }
-    fun setShowSubtitleListSheet(show: Boolean) { _showSubtitleListSheet.value = show }
+    fun setShowPlacementDialog(show: Boolean) {
+        if (show && playerState.value.isPlaying) playerController.pause()
+        _showPlacementDialog.value = show
+    }
+
+    fun setShowStyleDialog(show: Boolean) {
+        if (show && playerState.value.isPlaying) playerController.pause()
+        _showStyleDialog.value = show
+    }
+
+    fun setShowExportDialog(show: Boolean) {
+        if (show && playerState.value.isPlaying) playerController.pause()
+        _showExportDialog.value = show
+    }
+
+    fun setShowSubtitleListSheet(show: Boolean) {
+        if (show && playerState.value.isPlaying) playerController.pause()
+        _showSubtitleListSheet.value = show
+    }
 
     override fun onCleared() {
         super.onCleared()

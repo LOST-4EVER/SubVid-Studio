@@ -108,7 +108,14 @@ class VideoPlayerController(
         exoPlayer = player
     }
 
-    fun loadMedia(uri: Uri) {
+    private var currentLoadedUriString: String? = null
+
+    fun loadMedia(uri: Uri, forceReload: Boolean = false) {
+        val uriStr = uri.toString()
+        if (!forceReload && currentLoadedUriString == uriStr && exoPlayer != null) {
+            return
+        }
+        currentLoadedUriString = uriStr
         val player = getPlayer()
         val mediaItem = MediaItem.fromUri(uri)
         player.setMediaItem(mediaItem)
@@ -121,6 +128,7 @@ class VideoPlayerController(
     }
 
     fun unloadMedia() {
+        currentLoadedUriString = null
         stopProgressTracker()
         exoPlayer?.stop()
         exoPlayer?.clearMediaItems()

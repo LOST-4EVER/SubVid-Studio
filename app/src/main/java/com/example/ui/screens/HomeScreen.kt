@@ -42,7 +42,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
@@ -78,6 +78,10 @@ fun HomeScreen(
     var newProjectName by remember { mutableStateOf("") }
     var projectToDelete by remember { mutableStateOf<StudioProject?>(null) }
 
+    val videoMetadata by viewModel.videoMetadata.collectAsState()
+    val subtitleTrack by viewModel.subtitleTrack.collectAsState()
+    val hasActiveSession = videoMetadata.uriString.isNotEmpty() || subtitleTrack.cues.isNotEmpty()
+
     val videoPickerLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.GetContent()
     ) { uri: Uri? ->
@@ -104,7 +108,7 @@ fun HomeScreen(
         // 1. Sleek Compact Header & Engine Status
         item {
             Surface(
-                shape = RoundedCornerShape(16.dp),
+                shape = RectangleShape,
                 color = ImmersiveSurface,
                 border = androidx.compose.foundation.BorderStroke(1.dp, ImmersiveBorder),
                 modifier = Modifier.fillMaxWidth()
@@ -122,13 +126,8 @@ fun HomeScreen(
                     ) {
                         Box(
                             modifier = Modifier
-                                .size(38.dp)
-                                .clip(RoundedCornerShape(10.dp))
-                                .background(
-                                    Brush.linearGradient(
-                                        listOf(ImmersivePrimary, AccentCyan)
-                                    )
-                                ),
+                                .size(36.dp)
+                                .background(ImmersivePrimary),
                             contentAlignment = Alignment.Center
                         ) {
                             Icon(
@@ -156,7 +155,7 @@ fun HomeScreen(
 
                     // Engine Badge
                     Surface(
-                        shape = RoundedCornerShape(20.dp),
+                        shape = RectangleShape,
                         color = if (settings.engine == ProcessingEngine.GPU_HARDWARE) AccentCyan.copy(alpha = 0.15f) else ImmersivePrimary.copy(alpha = 0.15f),
                         border = androidx.compose.foundation.BorderStroke(
                             1.dp,
@@ -186,6 +185,76 @@ fun HomeScreen(
             }
         }
 
+        // Active Session Resume Banner (if media or subtitles loaded)
+        if (hasActiveSession) {
+            item {
+                Surface(
+                    shape = RectangleShape,
+                    color = ImmersivePrimary.copy(alpha = 0.08f),
+                    border = androidx.compose.foundation.BorderStroke(1.5.dp, ImmersivePrimary),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable { onNavigateTab(AppTab.EDITOR) }
+                        .testTag("home_resume_session_banner")
+                ) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(12.dp),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(10.dp),
+                            modifier = Modifier.weight(1f)
+                        ) {
+                            Box(
+                                modifier = Modifier
+                                    .size(32.dp)
+                                    .background(ImmersivePrimary),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Icon(
+                                    imageVector = StudioIcons.Play,
+                                    contentDescription = null,
+                                    tint = Color.Black,
+                                    modifier = Modifier.size(16.dp)
+                                )
+                            }
+                            Column {
+                                Text(
+                                    text = "Active Session in Progress",
+                                    color = ImmersivePrimary,
+                                    fontSize = 12.sp,
+                                    fontWeight = FontWeight.Bold
+                                )
+                                Text(
+                                    text = if (videoMetadata.fileName.isNotEmpty()) {
+                                        "${videoMetadata.fileName} • ${subtitleTrack.cues.size} Cues"
+                                    } else {
+                                        "${subtitleTrack.cues.size} Cues • ${subtitleTrack.format.extension.uppercase()}"
+                                    },
+                                    color = ImmersiveTextPrimary,
+                                    fontSize = 11.sp,
+                                    maxLines = 1
+                                )
+                            }
+                        }
+
+                        Button(
+                            onClick = { onNavigateTab(AppTab.EDITOR) },
+                            colors = ButtonDefaults.buttonColors(containerColor = ImmersivePrimary),
+                            shape = RectangleShape,
+                            contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 12.dp, vertical = 6.dp)
+                        ) {
+                            Text("Resume", color = Color.Black, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                        }
+                    }
+                }
+            }
+        }
+
         // 2. Quick Action Cards (Add Video, Import Subtitle, Batch Hub)
         item {
             Text(
@@ -203,7 +272,7 @@ fun HomeScreen(
             ) {
                 // Import Video Card
                 Card(
-                    shape = RoundedCornerShape(14.dp),
+                    shape = RectangleShape,
                     colors = CardDefaults.cardColors(containerColor = ImmersiveSurface),
                     border = androidx.compose.foundation.BorderStroke(1.dp, ImmersiveCardBorder),
                     modifier = Modifier
@@ -218,7 +287,6 @@ fun HomeScreen(
                         Box(
                             modifier = Modifier
                                 .size(28.dp)
-                                .clip(RoundedCornerShape(8.dp))
                                 .background(ImmersivePrimary.copy(alpha = 0.15f)),
                             contentAlignment = Alignment.Center
                         ) {
@@ -240,7 +308,7 @@ fun HomeScreen(
 
                 // Import Subtitle Card
                 Card(
-                    shape = RoundedCornerShape(14.dp),
+                    shape = RectangleShape,
                     colors = CardDefaults.cardColors(containerColor = ImmersiveSurface),
                     border = androidx.compose.foundation.BorderStroke(1.dp, ImmersiveCardBorder),
                     modifier = Modifier
@@ -255,7 +323,6 @@ fun HomeScreen(
                         Box(
                             modifier = Modifier
                                 .size(28.dp)
-                                .clip(RoundedCornerShape(8.dp))
                                 .background(AccentCyan.copy(alpha = 0.15f)),
                             contentAlignment = Alignment.Center
                         ) {
@@ -277,7 +344,7 @@ fun HomeScreen(
 
                 // Batch Hub Card
                 Card(
-                    shape = RoundedCornerShape(14.dp),
+                    shape = RectangleShape,
                     colors = CardDefaults.cardColors(containerColor = ImmersiveSurface),
                     border = androidx.compose.foundation.BorderStroke(1.dp, ImmersiveCardBorder),
                     modifier = Modifier
@@ -292,7 +359,6 @@ fun HomeScreen(
                         Box(
                             modifier = Modifier
                                 .size(28.dp)
-                                .clip(RoundedCornerShape(8.dp))
                                 .background(AccentEmerald.copy(alpha = 0.15f)),
                             contentAlignment = Alignment.Center
                         ) {
@@ -333,7 +399,7 @@ fun HomeScreen(
                         letterSpacing = 1.sp
                     )
                     Surface(
-                        shape = CircleShape,
+                        shape = RectangleShape,
                         color = ImmersiveActionBg
                     ) {
                         Text(
@@ -347,7 +413,7 @@ fun HomeScreen(
                 }
 
                 Surface(
-                    shape = RoundedCornerShape(8.dp),
+                    shape = RectangleShape,
                     color = ImmersivePrimary.copy(alpha = 0.15f),
                     border = androidx.compose.foundation.BorderStroke(1.dp, ImmersivePrimary.copy(alpha = 0.4f)),
                     modifier = Modifier.clickable {
@@ -371,7 +437,7 @@ fun HomeScreen(
         if (projects.isEmpty()) {
             item {
                 Surface(
-                    shape = RoundedCornerShape(16.dp),
+                    shape = RectangleShape,
                     color = ImmersiveSurface,
                     border = androidx.compose.foundation.BorderStroke(1.dp, ImmersiveBorder),
                     modifier = Modifier.fillMaxWidth()
@@ -385,8 +451,7 @@ fun HomeScreen(
                     ) {
                         Box(
                             modifier = Modifier
-                                .size(54.dp)
-                                .clip(CircleShape)
+                                .size(48.dp)
                                 .background(ImmersiveActionBg),
                             contentAlignment = Alignment.Center
                         ) {
@@ -394,7 +459,7 @@ fun HomeScreen(
                                 imageVector = StudioIcons.FolderOpen,
                                 contentDescription = null,
                                 tint = ImmersivePrimary,
-                                modifier = Modifier.size(28.dp)
+                                modifier = Modifier.size(26.dp)
                             )
                         }
 
@@ -419,7 +484,7 @@ fun HomeScreen(
                             Button(
                                 onClick = { videoPickerLauncher.launch("video/*") },
                                 colors = ButtonDefaults.buttonColors(containerColor = ImmersivePrimary),
-                                shape = RoundedCornerShape(8.dp),
+                                shape = RectangleShape,
                                 contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 14.dp, vertical = 8.dp)
                             ) {
                                 Icon(StudioIcons.Video, contentDescription = null, tint = Color.Black, modifier = Modifier.size(14.dp))
@@ -428,7 +493,7 @@ fun HomeScreen(
                             }
 
                             Surface(
-                                shape = RoundedCornerShape(8.dp),
+                                shape = RectangleShape,
                                 color = ImmersiveActionBg,
                                 border = androidx.compose.foundation.BorderStroke(1.dp, ImmersiveBorder),
                                 modifier = Modifier.clickable {
@@ -469,6 +534,7 @@ fun HomeScreen(
         AlertDialog(
             onDismissRequest = { showNewProjectDialog = false },
             containerColor = ImmersiveSurface,
+            shape = RectangleShape,
             title = {
                 Text("Create New Project", color = ImmersiveTextPrimary, fontSize = 15.sp, fontWeight = FontWeight.Bold)
             },
@@ -487,7 +553,7 @@ fun HomeScreen(
                             focusedContainerColor = ImmersiveBg,
                             unfocusedContainerColor = ImmersiveBg
                         ),
-                        shape = RoundedCornerShape(8.dp),
+                        shape = RectangleShape,
                         modifier = Modifier.fillMaxWidth()
                     )
                 }
@@ -501,13 +567,13 @@ fun HomeScreen(
                         }
                     },
                     colors = ButtonDefaults.buttonColors(containerColor = ImmersivePrimary),
-                    shape = RoundedCornerShape(8.dp)
+                    shape = RectangleShape
                 ) {
                     Text("Create & Open", color = Color.Black, fontSize = 12.sp, fontWeight = FontWeight.Bold)
                 }
             },
             dismissButton = {
-                TextButton(onClick = { showNewProjectDialog = false }) {
+                TextButton(onClick = { showNewProjectDialog = false }, shape = RectangleShape) {
                     Text("Cancel", color = ImmersiveTextSecondary, fontSize = 12.sp)
                 }
             }
@@ -520,6 +586,7 @@ fun HomeScreen(
         AlertDialog(
             onDismissRequest = { projectToDelete = null },
             containerColor = ImmersiveSurface,
+            shape = RectangleShape,
             title = {
                 Text("Delete Project?", color = ImmersiveTextPrimary, fontSize = 15.sp, fontWeight = FontWeight.Bold)
             },
@@ -537,13 +604,13 @@ fun HomeScreen(
                         projectToDelete = null
                     },
                     colors = ButtonDefaults.buttonColors(containerColor = AccentRose),
-                    shape = RoundedCornerShape(8.dp)
+                    shape = RectangleShape
                 ) {
                     Text("Delete", color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.Bold)
                 }
             },
             dismissButton = {
-                TextButton(onClick = { projectToDelete = null }) {
+                TextButton(onClick = { projectToDelete = null }, shape = RectangleShape) {
                     Text("Cancel", color = ImmersiveTextSecondary, fontSize = 12.sp)
                 }
             }
@@ -559,7 +626,7 @@ fun ProjectListItemCard(
     modifier: Modifier = Modifier
 ) {
     Card(
-        shape = RoundedCornerShape(14.dp),
+        shape = RectangleShape,
         colors = CardDefaults.cardColors(containerColor = ImmersiveSurface),
         border = androidx.compose.foundation.BorderStroke(1.dp, ImmersiveBorder),
         modifier = modifier
@@ -581,10 +648,9 @@ fun ProjectListItemCard(
                 // Project Thumbnail / Icon
                 Box(
                     modifier = Modifier
-                        .size(44.dp)
-                        .clip(RoundedCornerShape(10.dp))
+                        .size(40.dp)
                         .background(if (project.hasVideo) ImmersiveSurfaceCard else ImmersiveActionBg)
-                        .border(1.dp, ImmersiveBorder, RoundedCornerShape(10.dp)),
+                        .border(1.dp, ImmersiveBorder, RectangleShape),
                     contentAlignment = Alignment.Center
                 ) {
                     Icon(
@@ -610,7 +676,7 @@ fun ProjectListItemCard(
                         horizontalArrangement = Arrangement.spacedBy(6.dp)
                     ) {
                         Surface(
-                            shape = RoundedCornerShape(4.dp),
+                            shape = RectangleShape,
                             color = AccentCyan.copy(alpha = 0.15f)
                         ) {
                             Text(
@@ -649,7 +715,7 @@ fun ProjectListItemCard(
                 horizontalArrangement = Arrangement.spacedBy(4.dp)
             ) {
                 Surface(
-                    shape = RoundedCornerShape(8.dp),
+                    shape = RectangleShape,
                     color = ImmersivePrimary,
                     modifier = Modifier.clickable { onOpen() }
                 ) {

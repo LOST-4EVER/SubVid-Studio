@@ -31,6 +31,10 @@ import com.example.ui.theme.ImmersiveBg
 import com.example.ui.theme.SubVidStudioTheme
 import com.example.viewmodel.MainViewModel
 
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.compose.LocalLifecycleOwner
+
 class MainActivity : ComponentActivity() {
 
     private val viewModel: MainViewModel by viewModels()
@@ -50,7 +54,24 @@ class MainActivity : ComponentActivity() {
 fun StudioApp(viewModel: MainViewModel) {
     val currentTab by viewModel.currentTab.collectAsState()
     val isFullscreenVideo by viewModel.isFullscreenVideo.collectAsState()
+    val videoMetadata by viewModel.videoMetadata.collectAsState()
+    val subtitleTrack by viewModel.subtitleTrack.collectAsState()
     val context = LocalContext.current
+    val lifecycleOwner = LocalLifecycleOwner.current
+
+    // Pause player and save project on lifecycle pause/stop
+    DisposableEffect(lifecycleOwner) {
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_PAUSE || event == Lifecycle.Event.ON_STOP) {
+                viewModel.playerController.pause()
+                viewModel.saveCurrentProject()
+            }
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose {
+            lifecycleOwner.lifecycle.removeObserver(observer)
+        }
+    }
 
     // Synchronize system bars visibility with Fullscreen Video state
     DisposableEffect(isFullscreenVideo) {
@@ -74,6 +95,8 @@ fun StudioApp(viewModel: MainViewModel) {
         }
     }
 
+    val hasActiveSession = videoMetadata.uriString.isNotEmpty() || subtitleTrack.cues.isNotEmpty()
+
     if (isFullscreenVideo) {
         // True Edge-to-Edge Fullscreen Canvas
         Box(
@@ -87,21 +110,19 @@ fun StudioApp(viewModel: MainViewModel) {
         Scaffold(
             containerColor = ImmersiveBg,
             bottomBar = {
-                if (currentTab != AppTab.EDITOR) {
-                    StudioNavBar(
-                        currentTab = currentTab,
-                        onTabSelected = { tab -> viewModel.setTab(tab) }
-                    )
-                }
+                StudioNavBar(
+                    currentTab = currentTab,
+                    onTabSelected = { tab -> viewModel.setTab(tab) },
+                    hasActiveProject = hasActiveSession
+                )
             },
             modifier = Modifier.fillMaxSize()
         ) { paddingValues ->
-            val finalPadding = if (currentTab == AppTab.EDITOR) androidx.compose.foundation.layout.PaddingValues(0.dp) else paddingValues
             Box(
                 modifier = Modifier
                     .fillMaxSize()
                     .background(ImmersiveBg)
-                    .padding(finalPadding)
+                    .padding(paddingValues)
             ) {
                 when (currentTab) {
                     AppTab.HOME -> {
