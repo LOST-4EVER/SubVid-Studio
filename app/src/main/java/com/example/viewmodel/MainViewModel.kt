@@ -35,6 +35,12 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import java.util.UUID
 
+enum class AutoSaveStatus {
+    SAVED,
+    SAVING,
+    IDLE
+}
+
 class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     val playerController = VideoPlayerController(application, viewModelScope)
@@ -52,6 +58,13 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     // Aspect Ratio Framing (Original, 16:9, 9:16, 1:1, 4:5, 21:9)
     private val _aspectRatio = MutableStateFlow(AspectRatioOption.ORIGINAL)
     val aspectRatio: StateFlow<AspectRatioOption> = _aspectRatio.asStateFlow()
+
+    // Subtitle source URI and Auto-Save Status
+    private val _subtitleSourceUri = MutableStateFlow<Uri?>(null)
+    val subtitleSourceUri: StateFlow<Uri?> = _subtitleSourceUri.asStateFlow()
+
+    private val _autoSaveStatus = MutableStateFlow(AutoSaveStatus.SAVED)
+    val autoSaveStatus: StateFlow<AutoSaveStatus> = _autoSaveStatus.asStateFlow()
 
     // Undo / Redo History Stacks
     private val undoStack = mutableListOf<SubtitleTrack>()
@@ -231,6 +244,10 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     fun saveCurrentProject() {
         val currentTrack = _subtitleTrack.value
         val currentMeta = _videoMetadata.value
+        if (currentTrack.cues.isEmpty() && currentMeta.uriString.isEmpty()) return
+
+        _autoSaveStatus.value = AutoSaveStatus.SAVING
+
         val fallbackName = when {
             currentTrack.title.isNotBlank() && currentTrack.title != "Untitled Track" && currentTrack.title != "Empty Subtitle Track" -> currentTrack.title
             currentMeta.fileName.isNotBlank() && currentMeta.fileName != "No Video" && currentMeta.fileName != "Video File" -> currentMeta.fileName
@@ -261,6 +278,31 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         _activeProject.value = updated
         projectRepository.saveProject(updated)
         refreshProjects()
+
+        // Write directly back to source subtitle URI if accessible
+        val sourceUri = _subtitleSourceUri.value
+        if (sourceUri != null && currentTrack.cues.isNotEmpty()) {
+            viewModelScope.launch(Dispatchers.IO) {
+                try {
+                    val context = getApplication<Application>()
+                    val text = SubtitleWriter.generate(
+                        track = currentTrack,
+                        format = currentTrack.format,
+                        videoWidth = playerState.value.videoWidth,
+                        videoHeight = playerState.value.videoHeight
+                    )
+                    context.contentResolver.openOutputStream(sourceUri, "wt")?.use { stream ->
+                        stream.write(text.toByteArray(Charsets.UTF_8))
+                    }
+                } catch (e: Exception) {
+                    Log.d("MainViewModel", "Auto-write to URI skipped or not writable: ${e.message}")
+                } finally {
+                    _autoSaveStatus.value = AutoSaveStatus.SAVED
+                }
+            }
+        } else {
+            _autoSaveStatus.value = AutoSaveStatus.SAVED
+        }
     }
 
     fun loadVideoFromUri(uri: Uri) {
@@ -316,7 +358,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                 try {
                     context.contentResolver.takePersistableUriPermission(
                         uri,
-                        android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION
+                        android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION or android.content.Intent.FLAG_GRANT_WRITE_URI_PERMISSION
                     )
                 } catch (_: Exception) {}
 
@@ -332,16 +374,16 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                     SubtitleParser.parse(stream, fileName)
                 } ?: SubtitleTrack(title = fileName, cues = emptyList())
 
+                _subtitleSourceUri.value = uri
                 _subtitleTrack.value = track
                 val firstCue = track.cues.firstOrNull()
                 _selectedCue.value = firstCue
-                if (firstCue != null && (_videoMetadata.value.uriString.isNotEmpty())) {
-                    if (playerState.value.currentPositionMs <= 1000L || _activeCue.value == null) {
-                        jumpToCue(firstCue)
-                    }
+                if (firstCue != null) {
+                    jumpToCue(firstCue)
                 }
                 saveCurrentProject()
                 _toastMessage.value = "Loaded ${track.cues.size} cues from $fileName"
+                _currentTab.value = AppTab.EDITOR
             } catch (e: Exception) {
                 Log.e("MainViewModel", "Error loading subtitle file", e)
                 _toastMessage.value = "Failed to load subtitle file"

@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -28,6 +29,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.model.AspectRatioOption
@@ -44,6 +46,7 @@ import com.example.ui.theme.ImmersiveSurface
 import com.example.ui.theme.ImmersiveTextMuted
 import com.example.ui.theme.ImmersiveTextPrimary
 import com.example.ui.theme.ImmersiveTextSecondary
+import com.example.viewmodel.AutoSaveStatus
 
 @Composable
 fun EditorMediaHeader(
@@ -53,6 +56,7 @@ fun EditorMediaHeader(
     aspectRatio: AspectRatioOption,
     canUndo: Boolean,
     canRedo: Boolean,
+    autoSaveStatus: AutoSaveStatus = AutoSaveStatus.SAVED,
     onSelectAspectRatio: (AspectRatioOption) -> Unit,
     onUndoClick: () -> Unit,
     onRedoClick: () -> Unit,
@@ -80,51 +84,103 @@ fun EditorMediaHeader(
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 6.dp, vertical = 6.dp),
+                .padding(horizontal = 8.dp, vertical = 6.dp),
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            // Left Group: Back Button + Project Title & Cue count
+            // Left Group: Back Button + Clean Title and Format / Auto-Save metadata
             Row(
-                modifier = Modifier.weight(1f),
+                modifier = Modifier.weight(1f, fill = false),
                 horizontalArrangement = Arrangement.spacedBy(6.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 IconButton(
                     onClick = onBackClick,
-                    modifier = Modifier.size(34.dp).testTag("editor_back_btn")
+                    modifier = Modifier
+                        .size(32.dp)
+                        .background(ImmersiveActionBg, RectangleShape)
+                        .testTag("editor_back_btn")
                 ) {
                     Icon(
                         imageVector = StudioIcons.ArrowBack,
-                        contentDescription = "Back to Home",
+                        contentDescription = "Back",
                         tint = ImmersivePrimary,
-                        modifier = Modifier.size(18.dp)
+                        modifier = Modifier.size(16.dp)
                     )
                 }
 
-                Column(modifier = Modifier.weight(1f, fill = false)) {
+                Column(
+                    verticalArrangement = Arrangement.Center
+                ) {
+                    val displayName = when {
+                        subtitleTrack.title.isNotEmpty() && subtitleTrack.title != "Untitled Track" -> subtitleTrack.title
+                        videoFileName.isNotEmpty() -> videoFileName
+                        else -> "SubVid Studio"
+                    }
+
                     Text(
-                        text = if (videoFileName.isNotEmpty()) videoFileName else "SubVid Studio",
+                        text = displayName,
                         color = ImmersiveTextPrimary,
-                        fontSize = 11.sp,
+                        fontSize = 12.sp,
                         fontWeight = FontWeight.Bold,
-                        maxLines = 1
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
                     )
-                    Text(
-                        text = if (subtitleTrack.cues.isNotEmpty()) {
-                            "${subtitleTrack.cues.size} Cues • ${aspectRatio.shortLabel}"
-                        } else {
-                            "Draft • ${aspectRatio.shortLabel}"
-                        },
-                        color = AccentCyan,
-                        fontSize = 9.sp
-                    )
+
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(5.dp)
+                    ) {
+                        // Subtitle Format Badge
+                        Surface(
+                            shape = RectangleShape,
+                            color = AccentCyan.copy(alpha = 0.15f),
+                            border = androidx.compose.foundation.BorderStroke(0.5.dp, AccentCyan.copy(alpha = 0.5f))
+                        ) {
+                            Text(
+                                text = subtitleTrack.format.name,
+                                color = AccentCyan,
+                                fontSize = 8.sp,
+                                fontWeight = FontWeight.Bold,
+                                modifier = Modifier.padding(horizontal = 3.dp, vertical = 1.dp)
+                            )
+                        }
+
+                        Text(
+                            text = "${subtitleTrack.cues.size} Cues",
+                            color = ImmersiveTextSecondary,
+                            fontSize = 9.sp
+                        )
+
+                        // Auto-Save Status Indicator
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(2.dp)
+                        ) {
+                            Box(
+                                modifier = Modifier
+                                    .size(5.dp)
+                                    .background(
+                                        if (autoSaveStatus == AutoSaveStatus.SAVING) AccentCyan else AccentEmerald,
+                                        RectangleShape
+                                    )
+                            )
+                            Text(
+                                text = if (autoSaveStatus == AutoSaveStatus.SAVING) "Saving..." else "Saved",
+                                color = if (autoSaveStatus == AutoSaveStatus.SAVING) AccentCyan else AccentEmerald,
+                                fontSize = 8.sp,
+                                fontWeight = FontWeight.Medium
+                            )
+                        }
+                    }
                 }
             }
 
-            // Center / Right Group: Aspect Ratio, Undo, Redo, Optimize, Save, Export
+            Spacer(Modifier.width(6.dp))
+
+            // Right Group: Aspect Ratio Pill, Undo, Redo, Export, More Menu
             Row(
-                horizontalArrangement = Arrangement.spacedBy(4.dp),
+                horizontalArrangement = Arrangement.spacedBy(3.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 // 1. Aspect Ratio Dropdown Pill
@@ -139,19 +195,19 @@ fun EditorMediaHeader(
                     ) {
                         Row(
                             verticalAlignment = Alignment.CenterVertically,
-                            modifier = Modifier.padding(horizontal = 6.dp, vertical = 4.dp),
-                            horizontalArrangement = Arrangement.spacedBy(3.dp)
+                            modifier = Modifier.padding(horizontal = 5.dp, vertical = 4.dp),
+                            horizontalArrangement = Arrangement.spacedBy(2.dp)
                         ) {
                             Icon(
                                 StudioIcons.Crop,
                                 contentDescription = null,
                                 tint = AccentCyan,
-                                modifier = Modifier.size(12.dp)
+                                modifier = Modifier.size(11.dp)
                             )
                             Text(
                                 text = aspectRatio.shortLabel,
                                 color = ImmersiveTextPrimary,
-                                fontSize = 10.sp,
+                                fontSize = 9.sp,
                                 fontWeight = FontWeight.Bold
                             )
                         }
@@ -169,7 +225,7 @@ fun EditorMediaHeader(
                                     Text(
                                         text = option.label,
                                         color = if (option == aspectRatio) ImmersivePrimary else ImmersiveTextPrimary,
-                                        fontSize = 12.sp,
+                                        fontSize = 11.sp,
                                         fontWeight = if (option == aspectRatio) FontWeight.Bold else FontWeight.Normal
                                     )
                                 },
@@ -182,61 +238,35 @@ fun EditorMediaHeader(
                     }
                 }
 
-                // 2. Undo Button
+                // 2. Undo
                 IconButton(
                     onClick = onUndoClick,
                     enabled = canUndo,
-                    modifier = Modifier.size(30.dp).testTag("editor_undo_btn")
+                    modifier = Modifier.size(28.dp).testTag("editor_undo_btn")
                 ) {
                     Icon(
                         imageVector = StudioIcons.Undo,
                         contentDescription = "Undo",
-                        tint = if (canUndo) Color.White else ImmersiveTextMuted.copy(alpha = 0.4f),
-                        modifier = Modifier.size(16.dp)
+                        tint = if (canUndo) Color.White else ImmersiveTextMuted.copy(alpha = 0.35f),
+                        modifier = Modifier.size(15.dp)
                     )
                 }
 
-                // 3. Redo Button
+                // 3. Redo
                 IconButton(
                     onClick = onRedoClick,
                     enabled = canRedo,
-                    modifier = Modifier.size(30.dp).testTag("editor_redo_btn")
+                    modifier = Modifier.size(28.dp).testTag("editor_redo_btn")
                 ) {
                     Icon(
                         imageVector = StudioIcons.Redo,
                         contentDescription = "Redo",
-                        tint = if (canRedo) Color.White else ImmersiveTextMuted.copy(alpha = 0.4f),
-                        modifier = Modifier.size(16.dp)
+                        tint = if (canRedo) Color.White else ImmersiveTextMuted.copy(alpha = 0.35f),
+                        modifier = Modifier.size(15.dp)
                     )
                 }
 
-                // 4. Quick Optimize Button
-                IconButton(
-                    onClick = onOptimizeClick,
-                    modifier = Modifier.size(30.dp).testTag("editor_optimize_btn")
-                ) {
-                    Icon(
-                        imageVector = StudioIcons.Speed,
-                        contentDescription = "Performance & Optimization Options",
-                        tint = AccentCyan,
-                        modifier = Modifier.size(16.dp)
-                    )
-                }
-
-                // 5. Save Project Button (Disk Icon)
-                IconButton(
-                    onClick = onSaveProjectClick,
-                    modifier = Modifier.size(30.dp).testTag("editor_save_project_btn")
-                ) {
-                    Icon(
-                        imageVector = StudioIcons.Save,
-                        contentDescription = "Save Project",
-                        tint = AccentEmerald,
-                        modifier = Modifier.size(16.dp)
-                    )
-                }
-
-                // 6. Export Action Button (Share / Export Icon)
+                // 4. Export / Share Button
                 Surface(
                     shape = RectangleShape,
                     color = ImmersivePrimary,
@@ -246,33 +276,33 @@ fun EditorMediaHeader(
                 ) {
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
-                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 5.dp),
-                        horizontalArrangement = Arrangement.spacedBy(4.dp)
+                        modifier = Modifier.padding(horizontal = 7.dp, vertical = 4.dp),
+                        horizontalArrangement = Arrangement.spacedBy(3.dp)
                     ) {
                         Icon(
                             imageVector = StudioIcons.Export,
                             contentDescription = null,
                             tint = Color.Black,
-                            modifier = Modifier.size(13.dp)
+                            modifier = Modifier.size(12.dp)
                         )
                         Text(
                             text = "Export",
                             color = Color.Black,
-                            fontSize = 11.sp,
+                            fontSize = 10.sp,
                             fontWeight = FontWeight.Bold
                         )
                     }
                 }
 
-                // 7. More Options Dropdown (Media Management)
+                // 5. More Options Overflow Menu
                 Box {
                     IconButton(
                         onClick = { showMoreMenu = true },
-                        modifier = Modifier.size(30.dp).testTag("editor_more_options_btn")
+                        modifier = Modifier.size(28.dp).testTag("editor_more_options_btn")
                     ) {
                         Icon(
                             imageVector = StudioIcons.MoreVert,
-                            contentDescription = "Media Options",
+                            contentDescription = "More Options",
                             tint = ImmersiveTextSecondary,
                             modifier = Modifier.size(16.dp)
                         )
@@ -285,70 +315,62 @@ fun EditorMediaHeader(
                         modifier = Modifier.background(ImmersiveSurface)
                     ) {
                         DropdownMenuItem(
-                            text = { Text("Load Video File...", color = ImmersiveTextPrimary, fontSize = 12.sp) },
-                            leadingIcon = { Icon(StudioIcons.Import, contentDescription = null, tint = ImmersivePrimary, modifier = Modifier.size(16.dp)) },
-                            onClick = {
-                                showMoreMenu = false
-                                onLoadVideoClick()
-                            }
-                        )
-                        if (hasVideoLoaded) {
-                            DropdownMenuItem(
-                                text = { Text("Unload Video", color = AccentRose, fontSize = 12.sp) },
-                                leadingIcon = { Icon(StudioIcons.Delete, contentDescription = null, tint = AccentRose, modifier = Modifier.size(16.dp)) },
-                                onClick = {
-                                    showMoreMenu = false
-                                    onUnloadVideoClick()
-                                }
-                            )
-                        }
-                        DropdownMenuItem(
                             text = { Text("Import Subtitle File...", color = ImmersiveTextPrimary, fontSize = 12.sp) },
-                            leadingIcon = { Icon(StudioIcons.Subtitles, contentDescription = null, tint = AccentCyan, modifier = Modifier.size(16.dp)) },
+                            leadingIcon = { Icon(StudioIcons.Subtitles, contentDescription = null, tint = AccentCyan, modifier = Modifier.size(15.dp)) },
                             onClick = {
                                 showMoreMenu = false
                                 onLoadSubtitleClick()
                             }
                         )
                         DropdownMenuItem(
-                            text = { Text("New Blank Subtitle Track", color = ImmersiveTextPrimary, fontSize = 12.sp) },
-                            leadingIcon = { Icon(StudioIcons.Add, contentDescription = null, tint = ImmersivePrimary, modifier = Modifier.size(16.dp)) },
+                            text = { Text("Load Video File...", color = ImmersiveTextPrimary, fontSize = 12.sp) },
+                            leadingIcon = { Icon(StudioIcons.Import, contentDescription = null, tint = ImmersivePrimary, modifier = Modifier.size(15.dp)) },
                             onClick = {
                                 showMoreMenu = false
-                                onCreateNewSubtitleTrack()
+                                onLoadVideoClick()
                             }
                         )
                         if (subtitleTrack.cues.isNotEmpty()) {
                             DropdownMenuItem(
-                                text = { Text("Export Subtitles (.SRT)...", color = ImmersiveTextPrimary, fontSize = 12.sp) },
-                                leadingIcon = { Icon(StudioIcons.Save, contentDescription = null, tint = AccentEmerald, modifier = Modifier.size(16.dp)) },
+                                text = { Text("Export Subtitles as .SRT", color = ImmersiveTextPrimary, fontSize = 12.sp) },
+                                leadingIcon = { Icon(StudioIcons.Save, contentDescription = null, tint = AccentEmerald, modifier = Modifier.size(15.dp)) },
                                 onClick = {
                                     showMoreMenu = false
                                     onSaveSubtitleTrack(SubtitleFormat.SRT)
                                 }
                             )
                             DropdownMenuItem(
-                                text = { Text("Export Subtitles (.VTT)...", color = ImmersiveTextPrimary, fontSize = 12.sp) },
-                                leadingIcon = { Icon(StudioIcons.Save, contentDescription = null, tint = AccentEmerald, modifier = Modifier.size(16.dp)) },
+                                text = { Text("Export Subtitles as .VTT", color = ImmersiveTextPrimary, fontSize = 12.sp) },
+                                leadingIcon = { Icon(StudioIcons.Save, contentDescription = null, tint = AccentEmerald, modifier = Modifier.size(15.dp)) },
                                 onClick = {
                                     showMoreMenu = false
                                     onSaveSubtitleTrack(SubtitleFormat.VTT)
                                 }
                             )
                             DropdownMenuItem(
-                                text = { Text("Export Subtitles (.ASS)...", color = ImmersiveTextPrimary, fontSize = 12.sp) },
-                                leadingIcon = { Icon(StudioIcons.Save, contentDescription = null, tint = AccentEmerald, modifier = Modifier.size(16.dp)) },
+                                text = { Text("Export Subtitles as .ASS", color = ImmersiveTextPrimary, fontSize = 12.sp) },
+                                leadingIcon = { Icon(StudioIcons.Save, contentDescription = null, tint = AccentEmerald, modifier = Modifier.size(15.dp)) },
                                 onClick = {
                                     showMoreMenu = false
                                     onSaveSubtitleTrack(SubtitleFormat.ASS)
                                 }
                             )
+                        }
+                        DropdownMenuItem(
+                            text = { Text("Performance & Optimization", color = ImmersiveTextPrimary, fontSize = 12.sp) },
+                            leadingIcon = { Icon(StudioIcons.Speed, contentDescription = null, tint = AccentCyan, modifier = Modifier.size(15.dp)) },
+                            onClick = {
+                                showMoreMenu = false
+                                onOptimizeClick()
+                            }
+                        )
+                        if (hasVideoLoaded) {
                             DropdownMenuItem(
-                                text = { Text("Unload Subtitles", color = AccentRose, fontSize = 12.sp) },
-                                leadingIcon = { Icon(StudioIcons.Delete, contentDescription = null, tint = AccentRose, modifier = Modifier.size(16.dp)) },
+                                text = { Text("Unload Video", color = AccentRose, fontSize = 12.sp) },
+                                leadingIcon = { Icon(StudioIcons.Delete, contentDescription = null, tint = AccentRose, modifier = Modifier.size(15.dp)) },
                                 onClick = {
                                     showMoreMenu = false
-                                    onUnloadSubtitleTrack()
+                                    onUnloadVideoClick()
                                 }
                             )
                         }

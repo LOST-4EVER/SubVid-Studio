@@ -47,7 +47,8 @@ data class ProcessingSettings(
     val nudgeStepMs: Long = 250L,
     val autoFixOverlapsOnImport: Boolean = true,
     val minimumCueGapMs: Long = 50L,
-    val timelineZoomLevel: Float = 1.0f
+    val timelineZoomLevel: Float = 1.0f,
+    val autoScrollTimeline: Boolean = true
 )
 
 enum class AppTab(val title: String) {

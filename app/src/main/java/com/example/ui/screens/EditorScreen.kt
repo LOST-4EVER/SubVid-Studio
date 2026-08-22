@@ -5,30 +5,42 @@ import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.Icon
+import androidx.compose.material3.Surface
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.example.model.SubtitleFormat
 import com.example.model.SubtitleStyle
 import com.example.parser.SubtitleWriter
 import com.example.ui.components.EditorCueInspector
 import com.example.ui.components.EditorMediaHeader
-import com.example.ui.components.EditorToolbeltStrip
 import com.example.ui.components.ExportDialog
 import com.example.ui.components.FullScreenVideoPlayerView
 import com.example.ui.components.OptimizationBottomSheet
@@ -40,7 +52,16 @@ import com.example.ui.components.VideoPlayerView
 import com.example.ui.components.dialogs.FindReplaceDialog
 import com.example.ui.components.dialogs.QuickPresetStyleSheet
 import com.example.ui.components.dialogs.TimingSanitizerDialog
+import com.example.ui.icons.StudioIcons
+import com.example.ui.theme.AccentCyan
+import com.example.ui.theme.AccentEmerald
+import com.example.ui.theme.AccentRose
+import com.example.ui.theme.ImmersiveActionBg
 import com.example.ui.theme.ImmersiveBg
+import com.example.ui.theme.ImmersiveBorder
+import com.example.ui.theme.ImmersivePrimary
+import com.example.ui.theme.ImmersiveSurface
+import com.example.ui.theme.ImmersiveTextPrimary
 import com.example.viewmodel.MainViewModel
 
 @Composable
@@ -59,6 +80,7 @@ fun EditorScreen(
     val processingSettings by viewModel.processingSettings.collectAsState()
     val exportState by viewModel.exportState.collectAsState()
     val isFullscreenVideo by viewModel.isFullscreenVideo.collectAsState()
+    val autoSaveStatus by viewModel.autoSaveStatus.collectAsState()
 
     val canUndo by viewModel.canUndo.collectAsState()
     val canRedo by viewModel.canRedo.collectAsState()
@@ -72,7 +94,6 @@ fun EditorScreen(
     val showSanitizerDialog by viewModel.showSanitizerDialog.collectAsState()
 
     var showPresetStylesSheet by remember { mutableStateOf(false) }
-
     var pendingExportFormat by remember { mutableStateOf<SubtitleFormat?>(null) }
 
     // Media and Subtitle file pickers
@@ -129,7 +150,7 @@ fun EditorScreen(
         return
     }
 
-    // Standard Multi-Pane Studio Editor Layout
+    // Standard Studio Editor Layout
     Column(
         modifier = modifier
             .fillMaxSize()
@@ -139,10 +160,10 @@ fun EditorScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .verticalScroll(rememberScrollState())
-                .padding(horizontal = 10.dp, vertical = 6.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp)
+                .padding(horizontal = 8.dp, vertical = 4.dp),
+            verticalArrangement = Arrangement.spacedBy(6.dp)
         ) {
-            // 1. Studio Media & Project Header
+            // 1. Studio Media & Project Header with auto-save badge
             EditorMediaHeader(
                 videoFileName = videoMetadata.fileName,
                 hasVideoLoaded = videoMetadata.uriString.isNotEmpty(),
@@ -150,12 +171,13 @@ fun EditorScreen(
                 aspectRatio = aspectRatio,
                 canUndo = canUndo,
                 canRedo = canRedo,
+                autoSaveStatus = autoSaveStatus,
                 onSelectAspectRatio = { viewModel.setAspectRatio(it) },
                 onUndoClick = { viewModel.undo() },
                 onRedoClick = { viewModel.redo() },
                 onSaveProjectClick = {
                     viewModel.saveCurrentProject()
-                    Toast.makeText(context, "Project & subtitles saved", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(context, "Saved project and subtitle file", Toast.LENGTH_SHORT).show()
                 },
                 onExportClick = { viewModel.setShowExportDialog(true) },
                 onOptimizeClick = { viewModel.setShowOptimizationSheet(true) },
@@ -172,7 +194,7 @@ fun EditorScreen(
                 onBackClick = { viewModel.setTab(com.example.model.AppTab.HOME) }
             )
 
-            // 2. Video Viewport Canvas with Aspect Ratio Framing & Interactive Drag/Pinch/Corner Handles
+            // 2. Video Viewport Canvas with Aspect Ratio Framing & Interactive Drag/Pinch
             val currentSelected = selectedCue ?: activeCue
             VideoPlayerView(
                 playerController = viewModel.playerController,
@@ -205,27 +227,24 @@ fun EditorScreen(
                 } else null,
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(210.dp)
+                    .height(200.dp)
             )
 
-            // 3. Pro Multi-Track Waveform & Timeline Scrubber
+            // 3. Compact Multi-Track Timeline Scrubber (Respects settings for snapping, zoom, auto-scroll)
             TimelineScrubberView(
                 currentPositionMs = playerState.currentPositionMs,
                 durationMs = playerState.durationMs,
                 subtitleTrack = subtitleTrack,
                 selectedCue = selectedCue,
+                processingSettings = processingSettings,
                 onSeek = { ms -> viewModel.playerController.seekTo(ms) },
                 onSelectCue = { cue -> viewModel.selectCue(cue) },
-                onAddCueAtCurrentPosition = { viewModel.addCueAtCurrentPosition() },
-                onSplitCueAtCurrentPosition = { viewModel.splitCueAtCurrentPosition() },
-                onDeleteSelectedCue = { viewModel.deleteSelectedCue() },
-                onNudgeTiming = { dStart, dEnd -> viewModel.nudgeTiming(dStart, dEnd) },
                 onSetCueStartTime = { cue, newStart -> viewModel.setCueStartTime(cue, newStart) },
                 onSetCueEndTime = { cue, newEnd -> viewModel.setCueEndTime(cue, newEnd) },
                 onShiftCueTiming = { cue, delta -> viewModel.shiftCueTiming(cue, delta) }
             )
 
-            // 4. Live Selected Cue Inspector Component (Handles Single-Cue Editing, Font Resizing & Stepper)
+            // 4. Live Selected Cue Review & Edit Inspector (Instant text saving and 1-tap position controls)
             val currentIdx = if (currentSelected != null) subtitleTrack.cues.indexOfFirst { it.id == currentSelected.id } else -1
 
             EditorCueInspector(
@@ -234,34 +253,151 @@ fun EditorScreen(
                 currentCueIndex = currentIdx,
                 onSelectPreviousCue = { viewModel.selectPreviousCue() },
                 onSelectNextCue = { viewModel.selectNextCue() },
-                onDuplicateCue = { viewModel.duplicateSelectedCue() },
                 onDeleteCue = { viewModel.deleteSelectedCue() },
-                onUpdateCueText = { cue, text -> viewModel.updateCueText(cue, text) },
+                onUpdateCueText = { cue, text ->
+                    viewModel.updateCueText(cue, text)
+                },
+                onUpdateCuePosition = { _, posX, posY ->
+                    viewModel.updateSubtitlePosition(posX, posY)
+                },
                 onUpdateCueStyle = { cue, style -> viewModel.updateSubtitleStyle(style, applyToAll = false) },
                 onUpdateCueFontSize = { cue, newSize -> viewModel.updateCueFontSize(cue, newSize, applyToAll = false) },
-                onJumpToCue = { cue -> viewModel.jumpToCue(cue) },
-                onAddFirstCue = { viewModel.addCueAtCurrentPosition() }
+                onJumpToCue = { cue -> viewModel.jumpToCue(cue) }
             )
 
-            // 5. Studio Action Strip / Toolbelt Component
-            EditorToolbeltStrip(
-                hasSelectedCue = currentSelected != null,
-                onAddSubtitleClick = { viewModel.addCueAtCurrentPosition() },
-                onSplitClick = { viewModel.splitCueAtCurrentPosition() },
-                onPlacementClick = { viewModel.setShowPlacementDialog(true) },
-                onStyleClick = { viewModel.setShowStyleDialog(true) },
-                onPresetPacksClick = { showPresetStylesSheet = true },
-                onFindReplaceClick = { viewModel.setShowFindReplaceDialog(true) },
-                onSanitizeTimingClick = { viewModel.setShowSanitizerDialog(true) },
-                onResizeTextClick = { viewModel.nudgeCueFontSize(2f) },
-                onSubtitlesListClick = { viewModel.setShowSubtitleListSheet(true) },
-                onOptimizationClick = { viewModel.setShowOptimizationSheet(true) },
-                onDeleteClick = { viewModel.deleteSelectedCue() },
-                onDuplicateClick = { viewModel.duplicateSelectedCue() }
-            )
+            // 5. Streamlined Review & Utility Toolbar Strip
+            Surface(
+                shape = RectangleShape,
+                color = ImmersiveSurface,
+                border = androidx.compose.foundation.BorderStroke(1.dp, ImmersiveBorder),
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .horizontalScroll(rememberScrollState())
+                        .padding(horizontal = 6.dp, vertical = 6.dp),
+                    horizontalArrangement = Arrangement.spacedBy(6.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    // All Cues List
+                    Surface(
+                        shape = RectangleShape,
+                        color = ImmersiveActionBg,
+                        border = androidx.compose.foundation.BorderStroke(1.dp, ImmersiveBorder),
+                        modifier = Modifier
+                            .clickable { viewModel.setShowSubtitleListSheet(true) }
+                            .testTag("toolbelt_all_cues_btn")
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 5.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(4.dp)
+                        ) {
+                            Icon(StudioIcons.Subtitles, contentDescription = null, tint = AccentCyan, modifier = Modifier.size(13.dp))
+                            Text("All Cues (${subtitleTrack.cues.size})", color = ImmersiveTextPrimary, fontSize = 10.sp, fontWeight = FontWeight.Bold)
+                        }
+                    }
+
+                    // Placement & Coordinates Dialog
+                    Surface(
+                        shape = RectangleShape,
+                        color = ImmersiveActionBg,
+                        border = androidx.compose.foundation.BorderStroke(1.dp, ImmersiveBorder),
+                        modifier = Modifier
+                            .clickable { viewModel.setShowPlacementDialog(true) }
+                            .testTag("toolbelt_placement_btn")
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 5.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(4.dp)
+                        ) {
+                            Icon(StudioIcons.Crop, contentDescription = null, tint = ImmersivePrimary, modifier = Modifier.size(13.dp))
+                            Text("Placement...", color = ImmersiveTextPrimary, fontSize = 10.sp, fontWeight = FontWeight.Bold)
+                        }
+                    }
+
+                    // Style Dialog
+                    Surface(
+                        shape = RectangleShape,
+                        color = ImmersiveActionBg,
+                        border = androidx.compose.foundation.BorderStroke(1.dp, ImmersiveBorder),
+                        modifier = Modifier
+                            .clickable { viewModel.setShowStyleDialog(true) }
+                            .testTag("toolbelt_style_btn")
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 5.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(4.dp)
+                        ) {
+                            Icon(StudioIcons.Style, contentDescription = null, tint = AccentEmerald, modifier = Modifier.size(13.dp))
+                            Text("Style & Fonts...", color = ImmersiveTextPrimary, fontSize = 10.sp, fontWeight = FontWeight.Bold)
+                        }
+                    }
+
+                    // Style Presets
+                    Surface(
+                        shape = RectangleShape,
+                        color = ImmersiveActionBg,
+                        border = androidx.compose.foundation.BorderStroke(1.dp, ImmersiveBorder),
+                        modifier = Modifier
+                            .clickable { showPresetStylesSheet = true }
+                            .testTag("toolbelt_presets_btn")
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 5.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(4.dp)
+                        ) {
+                            Icon(StudioIcons.Style, contentDescription = null, tint = AccentCyan, modifier = Modifier.size(13.dp))
+                            Text("Presets", color = ImmersiveTextPrimary, fontSize = 10.sp, fontWeight = FontWeight.Bold)
+                        }
+                    }
+
+                    // Timing Sanitizer
+                    Surface(
+                        shape = RectangleShape,
+                        color = ImmersiveActionBg,
+                        border = androidx.compose.foundation.BorderStroke(1.dp, ImmersiveBorder),
+                        modifier = Modifier
+                            .clickable { viewModel.setShowSanitizerDialog(true) }
+                            .testTag("toolbelt_sanitizer_btn")
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 5.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(4.dp)
+                        ) {
+                            Icon(StudioIcons.Timer, contentDescription = null, tint = AccentCyan, modifier = Modifier.size(13.dp))
+                            Text("Fix Timing Overlaps", color = ImmersiveTextPrimary, fontSize = 10.sp, fontWeight = FontWeight.Bold)
+                        }
+                    }
+
+                    // Find & Replace
+                    Surface(
+                        shape = RectangleShape,
+                        color = ImmersiveActionBg,
+                        border = androidx.compose.foundation.BorderStroke(1.dp, ImmersiveBorder),
+                        modifier = Modifier
+                            .clickable { viewModel.setShowFindReplaceDialog(true) }
+                            .testTag("toolbelt_find_replace_btn")
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 5.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(4.dp)
+                        ) {
+                            Icon(StudioIcons.Search, contentDescription = null, tint = ImmersivePrimary, modifier = Modifier.size(13.dp))
+                            Text("Find & Replace", color = ImmersiveTextPrimary, fontSize = 10.sp, fontWeight = FontWeight.Bold)
+                        }
+                    }
+                }
+            }
 
             // Bottom spacing for navigation bar
-            Spacer(Modifier.height(80.dp))
+            Spacer(Modifier.height(70.dp))
         }
     }
 

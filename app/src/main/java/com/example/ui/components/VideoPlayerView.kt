@@ -34,6 +34,7 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -260,11 +261,23 @@ fun VideoPlayerView(
             var subtitleWidthPx by remember { mutableFloatStateOf(160f) }
             var subtitleHeightPx by remember { mutableFloatStateOf(44f) }
 
+            var dragNormX by remember(activeCue?.id) { mutableFloatStateOf(activeCue?.posX ?: 0.5f) }
+            var dragNormY by remember(activeCue?.id) { mutableFloatStateOf(activeCue?.posY ?: 0.85f) }
+
+            LaunchedEffect(activeCue?.posX, activeCue?.posY) {
+                if (!isUserDragging && activeCue != null) {
+                    dragNormX = activeCue.posX
+                    dragNormY = activeCue.posY
+                }
+            }
+
             // Guidance lines when dragging or resizing subtitle
             if ((isUserDragging || isResizingCorner || isPinchingText) && activeCue != null) {
                 Canvas(modifier = Modifier.fillMaxSize()) {
-                    val targetX = videoOffsetX + (activeCue.posX * videoRenderWidth)
-                    val targetY = videoOffsetY + (activeCue.posY * videoRenderHeight)
+                    val currentX = if (isUserDragging) dragNormX else activeCue.posX
+                    val currentY = if (isUserDragging) dragNormY else activeCue.posY
+                    val targetX = videoOffsetX + (currentX * videoRenderWidth)
+                    val targetY = videoOffsetY + (currentY * videoRenderHeight)
                     val dashEffect = PathEffect.dashPathEffect(floatArrayOf(8f, 8f), 0f)
 
                     // Safe-area bounding box
@@ -297,8 +310,10 @@ fun VideoPlayerView(
             }
 
             if (activeCue != null && activeCue.text.isNotEmpty()) {
-                val anchorCenterX = videoOffsetX + (activeCue.posX * videoRenderWidth)
-                val anchorCenterY = videoOffsetY + (activeCue.posY * videoRenderHeight)
+                val currentEffX = if (isUserDragging) dragNormX else activeCue.posX
+                val currentEffY = if (isUserDragging) dragNormY else activeCue.posY
+                val anchorCenterX = videoOffsetX + (currentEffX * videoRenderWidth)
+                val anchorCenterY = videoOffsetY + (currentEffY * videoRenderHeight)
 
                 val (rawLeftPx, rawTopPx) = when (activeCue.alignment) {
                     SubtitleAlignment.BOTTOM_START -> Pair(anchorCenterX, anchorCenterY - subtitleHeightPx)
@@ -352,21 +367,35 @@ fun VideoPlayerView(
                         // 2. Drag-to-move gesture anywhere on subtitle box
                         .pointerInput(activeCue.id, videoRenderWidth, videoRenderHeight) {
                             detectDragGestures(
-                                onDragStart = { isUserDragging = true; isSelectedBoxVisible = true },
-                                onDragEnd = { isUserDragging = false; isPinchingText = false },
-                                onDragCancel = { isUserDragging = false; isPinchingText = false }
+                                onDragStart = {
+                                    isUserDragging = true
+                                    isSelectedBoxVisible = true
+                                    dragNormX = activeCue.posX
+                                    dragNormY = activeCue.posY
+                                },
+                                onDragEnd = {
+                                    isUserDragging = false
+                                    isPinchingText = false
+                                    onSubtitlePositionChanged(dragNormX, dragNormY)
+                                },
+                                onDragCancel = {
+                                    isUserDragging = false
+                                    isPinchingText = false
+                                }
                             ) { change, dragAmount ->
                                 change.consume()
                                 val deltaX = dragAmount.x / videoRenderWidth
                                 val deltaY = dragAmount.y / videoRenderHeight
-                                var newX = (activeCue.posX + deltaX).coerceIn(0.05f, 0.95f)
-                                var newY = (activeCue.posY + deltaY).coerceIn(0.05f, 0.95f)
+                                var newX = (dragNormX + deltaX).coerceIn(0.05f, 0.95f)
+                                var newY = (dragNormY + deltaY).coerceIn(0.05f, 0.95f)
 
                                 // Snap to center X if within tolerance
                                 if (kotlin.math.abs(newX - 0.50f) < 0.03f) {
                                     newX = 0.50f
                                 }
 
+                                dragNormX = newX
+                                dragNormY = newY
                                 onSubtitlePositionChanged(newX, newY)
                             }
                         }

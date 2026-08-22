@@ -223,11 +223,24 @@ fun FullScreenVideoPlayerView(
                 val textColor = Color(style.textColorArgb)
                 val bgColor = if (hasDarkBox) Color(style.backgroundColorArgb) else Color.Transparent
 
-                val posXInVideo = videoOffsetX + (cue.posX * actualVideoWidth)
-                val posYInVideo = videoOffsetY + (cue.posY * actualVideoHeight)
-
                 var cueWidthPx by remember { mutableFloatStateOf(200f) }
                 var cueHeightPx by remember { mutableFloatStateOf(60f) }
+
+                var dragNormX by remember(cue.id) { mutableFloatStateOf(cue.posX) }
+                var dragNormY by remember(cue.id) { mutableFloatStateOf(cue.posY) }
+
+                LaunchedEffect(cue.posX, cue.posY) {
+                    if (!isUserDragging) {
+                        dragNormX = cue.posX
+                        dragNormY = cue.posY
+                    }
+                }
+
+                val currentEffX = if (isUserDragging) dragNormX else cue.posX
+                val currentEffY = if (isUserDragging) dragNormY else cue.posY
+
+                val posXInVideo = videoOffsetX + (currentEffX * actualVideoWidth)
+                val posYInVideo = videoOffsetY + (currentEffY * actualVideoHeight)
 
                 val clampedOffsetX = (posXInVideo - (cueWidthPx / 2f)).coerceIn(
                     videoOffsetX + 8f,
@@ -243,20 +256,34 @@ fun FullScreenVideoPlayerView(
                         .offset {
                             IntOffset(clampedOffsetX.roundToInt(), clampedOffsetY.roundToInt())
                         }
-                        .pointerInput(cue.id, actualVideoWidth, actualVideoHeight, videoOffsetX, videoOffsetY) {
+                        .pointerInput(cue.id, actualVideoWidth, actualVideoHeight) {
                             detectDragGestures(
-                                onDragStart = { isUserDragging = true },
-                                onDragEnd = { isUserDragging = false },
-                                onDragCancel = { isUserDragging = false },
+                                onDragStart = {
+                                    isUserDragging = true
+                                    dragNormX = cue.posX
+                                    dragNormY = cue.posY
+                                },
+                                onDragEnd = {
+                                    isUserDragging = false
+                                    onSubtitlePositionChanged(dragNormX, dragNormY)
+                                },
+                                onDragCancel = {
+                                    isUserDragging = false
+                                },
                                 onDrag = { change, dragAmount ->
                                     change.consume()
-                                    val currentPixelX = cue.posX * actualVideoWidth
-                                    val currentPixelY = cue.posY * actualVideoHeight
-                                    val newPixelX = currentPixelX + dragAmount.x
-                                    val newPixelY = currentPixelY + dragAmount.y
-                                    val newNormX = (newPixelX / actualVideoWidth).coerceIn(0.05f, 0.95f)
-                                    val newNormY = (newPixelY / actualVideoHeight).coerceIn(0.05f, 0.95f)
-                                    onSubtitlePositionChanged(newNormX, newNormY)
+                                    val deltaX = dragAmount.x / actualVideoWidth
+                                    val deltaY = dragAmount.y / actualVideoHeight
+                                    var newX = (dragNormX + deltaX).coerceIn(0.05f, 0.95f)
+                                    var newY = (dragNormY + deltaY).coerceIn(0.05f, 0.95f)
+
+                                    if (kotlin.math.abs(newX - 0.50f) < 0.03f) {
+                                        newX = 0.50f
+                                    }
+
+                                    dragNormX = newX
+                                    dragNormY = newY
+                                    onSubtitlePositionChanged(newX, newY)
                                 }
                             )
                         }

@@ -18,10 +18,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -34,7 +30,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
@@ -51,19 +46,17 @@ import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.example.model.ProcessingSettings
 import com.example.model.SubtitleCue
 import com.example.model.SubtitleTrack
-import com.example.ui.icons.StudioIcons
 import com.example.ui.theme.AccentCyan
 import com.example.ui.theme.AccentEmerald
 import com.example.ui.theme.AccentRose
 import com.example.ui.theme.ImmersiveActionBg
 import com.example.ui.theme.ImmersiveBg
 import com.example.ui.theme.ImmersiveBorder
-import com.example.ui.theme.ImmersiveCardBorder
 import com.example.ui.theme.ImmersivePrimary
 import com.example.ui.theme.ImmersiveSurface
-import com.example.ui.theme.ImmersiveSurfaceCard
 import com.example.ui.theme.ImmersiveTextMuted
 import com.example.ui.theme.ImmersiveTextPrimary
 import com.example.ui.theme.ImmersiveTextSecondary
@@ -78,12 +71,9 @@ fun TimelineScrubberView(
     durationMs: Long,
     subtitleTrack: SubtitleTrack,
     selectedCue: SubtitleCue?,
+    processingSettings: ProcessingSettings = ProcessingSettings(),
     onSeek: (Long) -> Unit,
     onSelectCue: (SubtitleCue) -> Unit,
-    onAddCueAtCurrentPosition: () -> Unit,
-    onSplitCueAtCurrentPosition: () -> Unit,
-    onDeleteSelectedCue: () -> Unit,
-    onNudgeTiming: (Long, Long) -> Unit,
     onSetCueStartTime: (SubtitleCue, Long) -> Unit,
     onSetCueEndTime: (SubtitleCue, Long) -> Unit,
     onShiftCueTiming: (SubtitleCue, Long) -> Unit,
@@ -94,10 +84,14 @@ fun TimelineScrubberView(
     val primaryColor = ImmersivePrimary
     val accentCyan = AccentCyan
 
-    var zoomLevel by remember { mutableFloatStateOf(1.0f) } // 1.0f (fit), 2.0f, 4.0f, 8.0f
-    val zoomOptions = listOf(1.0f, 2.0f, 4.0f, 8.0f)
+    var zoomLevel by remember(processingSettings.timelineZoomLevel) {
+        mutableFloatStateOf(processingSettings.timelineZoomLevel.coerceIn(1.0f, 8.0f))
+    }
+    val zoomOptions = listOf(1.0f, 2.0f, 4.0f)
     val scrollState = rememberScrollState()
-    var isSnapToGridEnabled by remember { mutableStateOf(true) }
+    var isSnapToGridEnabled by remember(processingSettings.snapToCues) {
+        mutableStateOf(processingSettings.snapToCues)
+    }
 
     var activeDragMode by remember { mutableStateOf(DragMode.NONE) }
     var dragTargetCue by remember { mutableStateOf<SubtitleCue?>(null) }
@@ -105,7 +99,7 @@ fun TimelineScrubberView(
 
     // Auto-scroll timeline to keep playhead in view when zoomed
     LaunchedEffect(currentPositionMs, zoomLevel) {
-        if (zoomLevel > 1.0f && totalDuration > 0 && activeDragMode == DragMode.NONE) {
+        if (zoomLevel > 1.0f && totalDuration > 0 && activeDragMode == DragMode.NONE && processingSettings.autoScrollTimeline) {
             val progress = currentPositionMs.toFloat() / totalDuration
             val targetScroll = (progress * scrollState.maxValue).toInt()
             scrollState.scrollTo((targetScroll - 200).coerceIn(0, scrollState.maxValue))
@@ -118,10 +112,10 @@ fun TimelineScrubberView(
             .clip(RectangleShape)
             .background(ImmersiveSurface)
             .border(1.dp, ImmersiveBorder, RectangleShape)
-            .padding(14.dp),
-        verticalArrangement = Arrangement.spacedBy(10.dp)
+            .padding(horizontal = 8.dp, vertical = 6.dp),
+        verticalArrangement = Arrangement.spacedBy(6.dp)
     ) {
-        // 1. Header: Track Tag, Zoom Controls, and Timecode Display
+        // 1. Header: Status Tag, Snap Toggle, Zoom Controls, Timecode
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceBetween,
@@ -129,28 +123,28 @@ fun TimelineScrubberView(
         ) {
             Row(
                 verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(6.dp)
+                horizontalArrangement = Arrangement.spacedBy(4.dp)
             ) {
                 Box(
                     modifier = Modifier
-                        .size(8.dp)
+                        .size(6.dp)
                         .background(AccentCyan, RectangleShape)
                 )
                 Text(
-                    text = "TIMELINE • ${subtitleTrack.format.extension.uppercase()} (${subtitleTrack.cues.size} CUES)",
+                    text = "TIMELINE • ${subtitleTrack.format.extension.uppercase()} (${subtitleTrack.cues.size})",
                     color = ImmersivePrimary,
-                    fontSize = 11.sp,
+                    fontSize = 10.sp,
                     fontWeight = FontWeight.Bold,
-                    letterSpacing = 1.sp
+                    letterSpacing = 0.5.sp
                 )
             }
 
-            // Controls Strip (Snap & Zoom)
+            // Controls Strip (Snap & Zoom + Timecode)
             Row(
                 horizontalArrangement = Arrangement.spacedBy(4.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                // Magnet Snap Toggle
+                // Snap Toggle
                 Surface(
                     shape = RectangleShape,
                     color = if (isSnapToGridEnabled) AccentCyan.copy(alpha = 0.2f) else ImmersiveActionBg,
@@ -158,11 +152,11 @@ fun TimelineScrubberView(
                     modifier = Modifier.clickable { isSnapToGridEnabled = !isSnapToGridEnabled }
                 ) {
                     Text(
-                        text = if (isSnapToGridEnabled) "Snap On" else "Snap Off",
+                        text = if (isSnapToGridEnabled) "Snap: ON" else "Snap: OFF",
                         color = if (isSnapToGridEnabled) AccentCyan else ImmersiveTextMuted,
-                        fontSize = 10.sp,
+                        fontSize = 9.sp,
                         fontWeight = FontWeight.Bold,
-                        modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                        modifier = Modifier.padding(horizontal = 5.dp, vertical = 2.dp)
                     )
                 }
 
@@ -171,147 +165,138 @@ fun TimelineScrubberView(
                     Surface(
                         shape = RectangleShape,
                         color = if (isSelected) ImmersivePrimary else ImmersiveActionBg,
+                        border = androidx.compose.foundation.BorderStroke(1.dp, if (isSelected) ImmersivePrimary else ImmersiveBorder),
                         modifier = Modifier.clickable { zoomLevel = zoom }
                     ) {
                         Text(
                             text = if (zoom == 1.0f) "Fit" else "${zoom.toInt()}x",
                             color = if (isSelected) Color.Black else ImmersiveTextSecondary,
-                            fontSize = 10.sp,
+                            fontSize = 9.sp,
                             fontWeight = FontWeight.Bold,
-                            modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                            modifier = Modifier.padding(horizontal = 5.dp, vertical = 2.dp)
                         )
                     }
                 }
-            }
-        }
 
-        // Time Counter Row & Live Drag Feedback Badge
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Text(
-                text = SubtitleCue.formatTimestamp(currentPositionMs),
-                color = AccentCyan,
-                fontSize = 13.sp,
-                fontFamily = FontFamily.Monospace,
-                fontWeight = FontWeight.Bold
-            )
-
-            if (activeDragMode != DragMode.NONE && dragFeedbackMessage.isNotEmpty()) {
-                Surface(
-                    shape = RectangleShape,
-                    color = AccentCyan.copy(alpha = 0.20f),
-                    border = androidx.compose.foundation.BorderStroke(1.dp, AccentCyan)
-                ) {
-                    Text(
-                        text = dragFeedbackMessage,
-                        color = Color.White,
-                        fontSize = 10.sp,
-                        fontWeight = FontWeight.Bold,
-                        fontFamily = FontFamily.Monospace,
-                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp)
-                    )
-                }
-            } else {
+                // Timecode
                 Text(
-                    text = "Total: ${SubtitleCue.formatTimestamp(durationMs)}",
-                    color = ImmersiveTextSecondary,
-                    fontSize = 11.sp,
-                    fontFamily = FontFamily.Monospace
+                    text = "${SubtitleCue.formatTimestampShort(currentPositionMs)} / ${SubtitleCue.formatTimestampShort(totalDuration)}",
+                    color = ImmersiveTextPrimary,
+                    fontSize = 10.sp,
+                    fontFamily = FontFamily.Monospace,
+                    fontWeight = FontWeight.Bold
                 )
             }
         }
 
-        // 2. Interactive Scrollable Multi-Track Waveform & Cue Canvas
+        // Live Drag Status Pill
+        if (dragFeedbackMessage.isNotEmpty()) {
+            Surface(
+                shape = RectangleShape,
+                color = AccentCyan.copy(alpha = 0.15f),
+                border = androidx.compose.foundation.BorderStroke(1.dp, AccentCyan),
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Text(
+                    text = dragFeedbackMessage,
+                    color = AccentCyan,
+                    fontSize = 9.sp,
+                    fontWeight = FontWeight.Bold,
+                    fontFamily = FontFamily.Monospace,
+                    modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                )
+            }
+        }
+
+        // 2. High-Performance Multi-Track Canvas
+        val rulerHeight = 16f
+        val cueTrackHeight = 28f
+        val waveHeight = 16f
+        val totalCanvasHeight = 64.dp
+
+        val textLayoutCache = remember { mutableMapOf<String, TextLayoutResult>() }
+
         Box(
             modifier = Modifier
                 .fillMaxWidth()
+                .height(totalCanvasHeight)
                 .horizontalScroll(scrollState)
+                .background(ImmersiveBg)
+                .border(1.dp, ImmersiveBorder, RectangleShape)
         ) {
-            val baseWidth = 340.dp
-            val canvasWidth = (baseWidth * zoomLevel).coerceAtLeast(baseWidth)
-
-            var dragStartX by remember { mutableFloatStateOf(0f) }
-            var dragInitialStartMs by remember { mutableStateOf(0L) }
-            var dragInitialEndMs by remember { mutableStateOf(0L) }
-
-            // Cache text layout measurements to avoid expensive CPU layout calls during 25fps draw ticks
-            val textLayoutCache = remember(subtitleTrack.cues, selectedCue?.id) {
-                mutableMapOf<String, TextLayoutResult>()
-            }
-
             Canvas(
                 modifier = Modifier
-                    .width(canvasWidth)
-                    .height(84.dp)
-                    .clip(RectangleShape)
-                    .background(ImmersiveBg)
-                    .border(1.dp, ImmersiveBorder, RectangleShape)
-                    .pointerInput(totalDuration, subtitleTrack.cues, selectedCue) {
+                    .fillMaxWidth()
+                    .height(totalCanvasHeight)
+                    .width(if (zoomLevel > 1.0f) (360 * zoomLevel).dp else 360.dp)
+                    .pointerInput(totalDuration, subtitleTrack, isSnapToGridEnabled, zoomLevel) {
+                        // A. Tap gesture
                         detectTapGestures { offset ->
                             val widthPx = size.width.toFloat()
-                            val ratio = (offset.x / widthPx).coerceIn(0f, 1f)
-                            val tappedMs = (ratio * totalDuration).toLong()
+                            val clickX = offset.x
+                            val clickMs = ((clickX / widthPx) * totalDuration).toLong().coerceIn(0L, totalDuration)
 
-                            // Check if tapped on a cue
                             val clickedCue = subtitleTrack.cues.firstOrNull { cue ->
-                                val sX = (cue.startTimeMs.toFloat() / totalDuration * widthPx)
-                                val eX = (cue.endTimeMs.toFloat() / totalDuration * widthPx)
-                                val bW = (eX - sX).coerceAtLeast(14f)
-                                offset.x >= sX && offset.x <= (sX + bW)
+                                val cueStartX = (cue.startTimeMs.toFloat() / totalDuration) * widthPx
+                                val cueEndX = (cue.endTimeMs.toFloat() / totalDuration) * widthPx
+                                clickX in (cueStartX - 4f)..(cueEndX + 4f)
                             }
 
                             if (clickedCue != null) {
                                 onSelectCue(clickedCue)
+                                onSeek(clickedCue.startTimeMs)
                             } else {
-                                onSeek(tappedMs)
+                                var seekTargetMs = clickMs
+                                if (isSnapToGridEnabled) {
+                                    val snapThresholdPx = 14f
+                                    for (cue in subtitleTrack.cues) {
+                                        val cueStartX = (cue.startTimeMs.toFloat() / totalDuration) * widthPx
+                                        val cueEndX = (cue.endTimeMs.toFloat() / totalDuration) * widthPx
+                                        if (abs(clickX - cueStartX) < snapThresholdPx) {
+                                            seekTargetMs = cue.startTimeMs
+                                            break
+                                        } else if (abs(clickX - cueEndX) < snapThresholdPx) {
+                                            seekTargetMs = cue.endTimeMs
+                                            break
+                                        }
+                                    }
+                                }
+                                onSeek(seekTargetMs)
                             }
                         }
                     }
-                    .pointerInput(totalDuration, subtitleTrack.cues, selectedCue, isSnapToGridEnabled) {
+                    .pointerInput(totalDuration, subtitleTrack, selectedCue, isSnapToGridEnabled, zoomLevel) {
+                        // B. Drag & Scrub Gestures
                         detectDragGestures(
                             onDragStart = { offset ->
-                                dragStartX = offset.x
                                 val widthPx = size.width.toFloat()
+                                val startX = offset.x
+                                val startY = offset.y
+                                val handleTolerance = 14f
 
-                                // Check if user touched edge handles of the selected cue or cue body
-                                if (selectedCue != null) {
-                                    val sX = (selectedCue.startTimeMs.toFloat() / totalDuration * widthPx)
-                                    val eX = (selectedCue.endTimeMs.toFloat() / totalDuration * widthPx)
-                                    val bW = (eX - sX).coerceAtLeast(14f)
+                                if (startY >= rulerHeight && selectedCue != null) {
+                                    val cueStartX = (selectedCue.startTimeMs.toFloat() / totalDuration) * widthPx
+                                    val cueEndX = (selectedCue.endTimeMs.toFloat() / totalDuration) * widthPx
 
-                                    if (offset.x in (sX - 12f)..(sX + 14f)) {
+                                    if (abs(startX - cueStartX) <= handleTolerance) {
                                         activeDragMode = DragMode.TRIM_START
                                         dragTargetCue = selectedCue
-                                        dragInitialStartMs = selectedCue.startTimeMs
-                                        dragInitialEndMs = selectedCue.endTimeMs
-                                        dragFeedbackMessage = "Trim Start: ${SubtitleCue.formatTimestampShort(selectedCue.startTimeMs)}"
-                                        return@detectDragGestures
-                                    } else if (offset.x in (sX + bW - 14f)..(sX + bW + 12f)) {
+                                    } else if (abs(startX - cueEndX) <= handleTolerance) {
                                         activeDragMode = DragMode.TRIM_END
                                         dragTargetCue = selectedCue
-                                        dragInitialStartMs = selectedCue.startTimeMs
-                                        dragInitialEndMs = selectedCue.endTimeMs
-                                        dragFeedbackMessage = "Trim End: ${SubtitleCue.formatTimestampShort(selectedCue.endTimeMs)}"
-                                        return@detectDragGestures
-                                    } else if (offset.x in sX..(sX + bW)) {
+                                    } else if (startX in cueStartX..cueEndX) {
                                         activeDragMode = DragMode.MOVE_CUE
                                         dragTargetCue = selectedCue
-                                        dragInitialStartMs = selectedCue.startTimeMs
-                                        dragInitialEndMs = selectedCue.endTimeMs
-                                        dragFeedbackMessage = "Move Cue #${selectedCue.id}"
-                                        return@detectDragGestures
+                                    } else {
+                                        activeDragMode = DragMode.SCRUB_PLAYHEAD
+                                        val seekMs = ((startX / widthPx) * totalDuration).toLong().coerceIn(0L, totalDuration)
+                                        onSeek(seekMs)
                                     }
+                                } else {
+                                    activeDragMode = DragMode.SCRUB_PLAYHEAD
+                                    val seekMs = ((startX / widthPx) * totalDuration).toLong().coerceIn(0L, totalDuration)
+                                    onSeek(seekMs)
                                 }
-
-                                // Fallback: scrub playhead
-                                activeDragMode = DragMode.SCRUB_PLAYHEAD
-                                val ratio = (offset.x / widthPx).coerceIn(0f, 1f)
-                                val targetSeek = (ratio * totalDuration).toLong()
-                                dragFeedbackMessage = "Playhead: ${SubtitleCue.formatTimestampShort(targetSeek)}"
-                                onSeek(targetSeek)
                             },
                             onDragEnd = {
                                 activeDragMode = DragMode.NONE
@@ -323,84 +308,57 @@ fun TimelineScrubberView(
                                 dragTargetCue = null
                                 dragFeedbackMessage = ""
                             }
-                        ) { change, dragAmount ->
+                        ) { change, _ ->
                             change.consume()
                             val widthPx = size.width.toFloat()
-                            val deltaPx = change.position.x - dragStartX
-                            val deltaMs = ((deltaPx / widthPx) * totalDuration).toLong()
-
+                            val currX = change.position.x
+                            val targetMs = ((currX / widthPx) * totalDuration).toLong().coerceIn(0L, totalDuration)
                             val cue = dragTargetCue
-                            val snapThresholdMs = 120L
 
                             when (activeDragMode) {
-                                DragMode.MOVE_CUE -> {
-                                    if (cue != null) {
-                                        val shiftMs = ((dragAmount.x / widthPx) * totalDuration).toLong()
-                                        if (shiftMs != 0L) {
-                                            onShiftCueTiming(cue, shiftMs)
-                                            dragFeedbackMessage = "Shift: ${SubtitleCue.formatTimestampShort(cue.startTimeMs)}"
-                                        }
-                                    }
+                                DragMode.SCRUB_PLAYHEAD -> {
+                                    onSeek(targetMs)
                                 }
                                 DragMode.TRIM_START -> {
                                     if (cue != null) {
-                                        var newStart = (dragInitialStartMs + deltaMs).coerceIn(0L, cue.endTimeMs - 100L)
-                                        if (isSnapToGridEnabled) {
-                                            if (abs(newStart - currentPositionMs) < snapThresholdMs) {
-                                                newStart = currentPositionMs
-                                            }
-                                        }
+                                        val newStart = targetMs.coerceIn(0L, cue.endTimeMs - 100L)
                                         onSetCueStartTime(cue, newStart)
+                                        onSeek(newStart)
                                         dragFeedbackMessage = "Start: ${SubtitleCue.formatTimestampShort(newStart)}"
                                     }
                                 }
                                 DragMode.TRIM_END -> {
                                     if (cue != null) {
-                                        var newEnd = (dragInitialEndMs + deltaMs).coerceIn(cue.startTimeMs + 100L, totalDuration)
-                                        if (isSnapToGridEnabled) {
-                                            if (abs(newEnd - currentPositionMs) < snapThresholdMs) {
-                                                newEnd = currentPositionMs
-                                            }
-                                        }
+                                        val newEnd = targetMs.coerceIn(cue.startTimeMs + 100L, totalDuration)
                                         onSetCueEndTime(cue, newEnd)
+                                        onSeek(newEnd)
                                         dragFeedbackMessage = "End: ${SubtitleCue.formatTimestampShort(newEnd)}"
                                     }
                                 }
-                                DragMode.SCRUB_PLAYHEAD -> {
-                                    val ratio = (change.position.x / widthPx).coerceIn(0f, 1f)
-                                    var scrubMs = (ratio * totalDuration).toLong()
-                                    if (isSnapToGridEnabled) {
-                                        subtitleTrack.cues.forEach { c ->
-                                            if (abs(scrubMs - c.startTimeMs) < snapThresholdMs) scrubMs = c.startTimeMs
-                                            else if (abs(scrubMs - c.endTimeMs) < snapThresholdMs) scrubMs = c.endTimeMs
-                                        }
+                                DragMode.MOVE_CUE -> {
+                                    if (cue != null) {
+                                        val cueDuration = cue.durationMs
+                                        val newStart = (targetMs - (cueDuration / 2)).coerceIn(0L, totalDuration - cueDuration)
+                                        val shiftDelta = newStart - cue.startTimeMs
+                                        onShiftCueTiming(cue, shiftDelta)
+                                        onSeek(newStart)
+                                        dragFeedbackMessage = "Shift: ${SubtitleCue.formatTimestampShort(newStart)}"
                                     }
-                                    dragFeedbackMessage = "Playhead: ${SubtitleCue.formatTimestampShort(scrubMs)}"
-                                    onSeek(scrubMs)
                                 }
                                 DragMode.NONE -> {}
                             }
                         }
                     }
-                    .testTag("timeline_scrubber_track")
             ) {
                 val widthPx = size.width
                 val heightPx = size.height
 
-                // A. Top Timecode Ruler
-                val rulerHeight = 18f
-                drawLine(
-                    color = ImmersiveBorder,
-                    start = Offset(0f, rulerHeight),
-                    end = Offset(widthPx, rulerHeight),
-                    strokeWidth = 1f
-                )
-
-                val tickCount = (16 * zoomLevel).toInt().coerceAtLeast(8)
+                // A. Time Ruler Ticks & Labels
+                val tickCount = (20 * zoomLevel).toInt().coerceAtLeast(10)
                 for (i in 0..tickCount) {
                     val x = (i.toFloat() / tickCount) * widthPx
                     val isMajor = i % 2 == 0
-                    val tickH = if (isMajor) 10f else 5f
+                    val tickH = if (isMajor) 8f else 4f
 
                     drawLine(
                         color = if (isMajor) Color.White.copy(alpha = 0.35f) else Color.White.copy(alpha = 0.15f),
@@ -424,9 +382,8 @@ fun TimelineScrubberView(
                     }
                 }
 
-                // B. Procedural Audio Speech Waveform Simulation Track (18px to 42px height)
-                val waveTop = 22f
-                val waveHeight = 20f
+                // B. Procedural Audio Waveform simulation
+                val waveTop = 18f
                 val waveBars = (widthPx / 4f).toInt()
                 val cuesList = subtitleTrack.cues
                 var sweepIdx = 0
@@ -437,7 +394,6 @@ fun TimelineScrubberView(
                         sweepIdx++
                     }
                     val hasCue = sweepIdx < cuesList.size && msAtBar >= cuesList[sweepIdx].startTimeMs
-
                     val baseAmp = if (hasCue) 0.65f else 0.20f
                     val sinFactor = (sin(b * 0.45) * 0.35f + 0.65f).toFloat()
                     val h = (waveHeight * baseAmp * sinFactor).coerceIn(2f, waveHeight)
@@ -450,14 +406,13 @@ fun TimelineScrubberView(
                     )
                 }
 
-                // C. Render Subtitle Cue Blocks Track (46px to 80px height)
-                val cueTrackTop = 46f
-                val cueTrackHeight = 32f
+                // C. Render Subtitle Cue Blocks Track
+                val cueTrackTop = 36f
 
                 cuesList.forEachIndexed { index, cue ->
                     val startX = (cue.startTimeMs.toFloat() / totalDuration * widthPx).coerceIn(0f, widthPx)
                     val endX = (cue.endTimeMs.toFloat() / totalDuration * widthPx).coerceIn(0f, widthPx)
-                    val blockWidth = (endX - startX).coerceAtLeast(12f)
+                    val blockWidth = (endX - startX).coerceAtLeast(10f)
 
                     val isSelected = selectedCue?.id == cue.id
                     val isActive = cue.isActiveAt(currentPositionMs)
@@ -485,25 +440,25 @@ fun TimelineScrubberView(
                         color = strokeColor,
                         topLeft = Offset(startX, cueTrackTop),
                         size = Size(blockWidth, cueTrackHeight),
-                        style = Stroke(width = if (isSelected) 2.5f else 1.2f)
+                        style = Stroke(width = if (isSelected) 2.dp.toPx() else 1.dp.toPx())
                     )
 
                     // If selected, draw trim handle grips on left and right
                     if (isSelected) {
                         drawRect(
                             color = Color.White,
-                            topLeft = Offset(startX, cueTrackTop + 4f),
-                            size = Size(4f, cueTrackHeight - 8f)
+                            topLeft = Offset(startX, cueTrackTop + 2f),
+                            size = Size(3f, cueTrackHeight - 4f)
                         )
                         drawRect(
                             color = Color.White,
-                            topLeft = Offset(startX + blockWidth - 4f, cueTrackTop + 4f),
-                            size = Size(4f, cueTrackHeight - 8f)
+                            topLeft = Offset(startX + blockWidth - 3f, cueTrackTop + 2f),
+                            size = Size(3f, cueTrackHeight - 4f)
                         )
                     }
 
-                    // Render text snippet inside block using cache
-                    if (blockWidth > 20f) {
+                    // Render text snippet inside block
+                    if (blockWidth > 18f) {
                         val label = cue.text.replace("\n", " ")
                         val cacheKey = "${cue.id}_${cue.text}_${isSelected}_${isActive}"
                         val layoutResult = textLayoutCache.getOrPut(cacheKey) {
@@ -511,14 +466,14 @@ fun TimelineScrubberView(
                                 text = label,
                                 style = TextStyle(
                                     color = if (isSelected || isActive) Color.White else Color.White.copy(alpha = 0.80f),
-                                    fontSize = 9.sp,
+                                    fontSize = 8.sp,
                                     fontWeight = FontWeight.Bold
                                 ),
                                 maxLines = 1,
                                 overflow = TextOverflow.Ellipsis
                             )
                         }
-                        val textX = (startX + 6f).coerceIn(0f, widthPx - 10f)
+                        val textX = (startX + 4f).coerceIn(0f, widthPx - 8f)
                         drawText(
                             textLayoutResult = layoutResult,
                             topLeft = Offset(textX, cueTrackTop + (cueTrackHeight - layoutResult.size.height) / 2f)
@@ -526,177 +481,19 @@ fun TimelineScrubberView(
                     }
                 }
 
-                // D. Glowing Precision Playhead Needle
+                // D. Precision Playhead Needle
                 val playheadX = (currentPositionMs.toFloat() / totalDuration * widthPx).coerceIn(0f, widthPx)
                 drawLine(
                     color = primaryColor,
                     start = Offset(playheadX, 0f),
                     end = Offset(playheadX, heightPx),
-                    strokeWidth = 3f
+                    strokeWidth = 2.5f
                 )
                 drawRect(
                     color = primaryColor,
-                    topLeft = Offset(playheadX - 4f, rulerHeight - 4f),
-                    size = Size(8f, 8f)
+                    topLeft = Offset(playheadX - 3f, rulerHeight - 3f),
+                    size = Size(6f, 6f)
                 )
-                drawRect(
-                    color = Color.White,
-                    topLeft = Offset(playheadX - 2f, rulerHeight - 2f),
-                    size = Size(4f, 4f)
-                )
-            }
-        }
-
-        // 3. Selected Cue Quick Timeline Action Bar
-        if (selectedCue != null) {
-            Surface(
-                shape = RectangleShape,
-                color = ImmersiveSurfaceCard,
-                border = androidx.compose.foundation.BorderStroke(1.dp, ImmersiveCardBorder),
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(10.dp),
-                    verticalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    // Cue Info & Playhead Sync
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        val cueIdx = subtitleTrack.cues.indexOfFirst { it.id == selectedCue.id }
-                        Column {
-                            Text(
-                                text = "CUE #${if (cueIdx >= 0) cueIdx + 1 else 1} TIMING",
-                                color = ImmersivePrimary,
-                                fontSize = 10.sp,
-                                fontWeight = FontWeight.Bold
-                            )
-                            Text(
-                                text = "${SubtitleCue.formatTimestampShort(selectedCue.startTimeMs)} ➔ ${SubtitleCue.formatTimestampShort(selectedCue.endTimeMs)} (${selectedCue.durationMs}ms)",
-                                color = ImmersiveTextPrimary,
-                                fontSize = 11.sp,
-                                fontFamily = FontFamily.Monospace
-                            )
-                        }
-
-                        // Align with Playhead Buttons
-                        Row(
-                            horizontalArrangement = Arrangement.spacedBy(6.dp),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Surface(
-                                shape = RectangleShape,
-                                color = ImmersiveActionBg,
-                                modifier = Modifier
-                                    .clickable { onSetCueStartTime(selectedCue, currentPositionMs) }
-                                    .testTag("set_start_now_btn")
-                            ) {
-                                Text(
-                                    text = "[ Start=Now",
-                                    color = AccentCyan,
-                                    fontSize = 10.sp,
-                                    fontWeight = FontWeight.Bold,
-                                    modifier = Modifier.padding(horizontal = 6.dp, vertical = 4.dp)
-                                )
-                            }
-
-                            Surface(
-                                shape = RectangleShape,
-                                color = ImmersiveActionBg,
-                                modifier = Modifier
-                                    .clickable { onSetCueEndTime(selectedCue, currentPositionMs) }
-                                    .testTag("set_end_now_btn")
-                                    
-                            ) {
-                                Text(
-                                    text = "End=Now ]",
-                                    color = AccentCyan,
-                                    fontSize = 10.sp,
-                                    fontWeight = FontWeight.Bold,
-                                    modifier = Modifier.padding(horizontal = 6.dp, vertical = 4.dp)
-                                )
-                            }
-                        }
-                    }
-
-                    // Operations Strip: Split, Add, Delete, Micro-Nudge
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(4.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        // Split
-                        Surface(
-                            shape = RectangleShape,
-                            color = ImmersiveActionBg,
-                            modifier = Modifier
-                                .weight(1f)
-                                .clickable { onSplitCueAtCurrentPosition() }
-                                .testTag("split_cue_btn")
-                        ) {
-                            Box(contentAlignment = Alignment.Center, modifier = Modifier.padding(vertical = 5.dp)) {
-                                Text("Split", color = AccentCyan, fontSize = 10.sp, fontWeight = FontWeight.Bold)
-                            }
-                        }
-
-                        // Add
-                        Surface(
-                            shape = RectangleShape,
-                            color = ImmersiveActionBg,
-                            modifier = Modifier
-                                .weight(1f)
-                                .clickable { onAddCueAtCurrentPosition() }
-                                .testTag("timeline_add_cue_btn")
-                        ) {
-                            Box(contentAlignment = Alignment.Center, modifier = Modifier.padding(vertical = 5.dp)) {
-                                Text("+ Cue", color = ImmersivePrimary, fontSize = 10.sp, fontWeight = FontWeight.Bold)
-                            }
-                        }
-
-                        // -0.1s Nudge
-                        Surface(
-                            shape = RectangleShape,
-                            color = ImmersiveActionBg,
-                            modifier = Modifier
-                                .weight(1f)
-                                .clickable { onNudgeTiming(-100L, -100L) }
-                        ) {
-                            Box(contentAlignment = Alignment.Center, modifier = Modifier.padding(vertical = 5.dp)) {
-                                Text("-0.1s", color = ImmersiveTextSecondary, fontSize = 10.sp)
-                            }
-                        }
-
-                        // +0.1s Nudge
-                        Surface(
-                            shape = RectangleShape,
-                            color = ImmersiveActionBg,
-                            modifier = Modifier
-                                .weight(1f)
-                                .clickable { onNudgeTiming(100L, 100L) }
-                        ) {
-                            Box(contentAlignment = Alignment.Center, modifier = Modifier.padding(vertical = 5.dp)) {
-                                Text("+0.1s", color = ImmersiveTextSecondary, fontSize = 10.sp)
-                            }
-                        }
-
-                        // Delete
-                        IconButton(
-                            onClick = onDeleteSelectedCue,
-                            modifier = Modifier.size(28.dp).testTag("delete_cue_button")
-                        ) {
-                            Icon(
-                                imageVector = StudioIcons.Delete,
-                                contentDescription = "Delete Cue",
-                                tint = AccentRose,
-                                modifier = Modifier.size(16.dp)
-                            )
-                        }
-                    }
-                }
             }
         }
     }
