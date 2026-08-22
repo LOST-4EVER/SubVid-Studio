@@ -4,7 +4,6 @@ import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -19,7 +18,6 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
@@ -27,8 +25,6 @@ import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Surface
@@ -42,19 +38,18 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.example.model.BatchOperationType
-import com.example.model.BatchTask
 import com.example.model.BatchTaskStatus
 import com.example.model.ProcessingEngine
 import com.example.model.SubtitleFormat
+import com.example.ui.components.batch.BatchHeader
+import com.example.ui.components.batch.BatchTaskItem
 import com.example.ui.icons.StudioIcons
+import com.example.ui.theme.AccentAmber
 import com.example.ui.theme.AccentCyan
 import com.example.ui.theme.AccentEmerald
 import com.example.ui.theme.AccentRose
@@ -64,7 +59,6 @@ import com.example.ui.theme.ImmersiveBorder
 import com.example.ui.theme.ImmersiveCardBorder
 import com.example.ui.theme.ImmersivePrimary
 import com.example.ui.theme.ImmersiveSurface
-import com.example.ui.theme.ImmersiveSurfaceCard
 import com.example.ui.theme.ImmersiveTextPrimary
 import com.example.ui.theme.ImmersiveTextSecondary
 import com.example.viewmodel.MainViewModel
@@ -108,95 +102,22 @@ fun BatchHubScreen(
             .padding(horizontal = 14.dp, vertical = 10.dp),
         verticalArrangement = Arrangement.spacedBy(14.dp)
     ) {
-        // 1. Top Hub Header & Engine Switcher
+        // 1. Modular Header & Processing Engine Badge
         item {
-            Surface(
-                shape = RectangleShape,
-                color = ImmersiveSurface,
-                border = androidx.compose.foundation.BorderStroke(1.dp, ImmersiveBorder),
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(14.dp),
-                    verticalArrangement = Arrangement.spacedBy(10.dp)
-                ) {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(8.dp)
-                        ) {
-                            Box(
-                                modifier = Modifier
-                                .size(32.dp)
-                                .background(AccentEmerald.copy(alpha = 0.2f)),
-                                contentAlignment = Alignment.Center
-                            ) {
-                                Icon(StudioIcons.BatchQueue, contentDescription = null, tint = AccentEmerald, modifier = Modifier.size(18.dp))
-                            }
-
-                            Column {
-                                Text(
-                                    text = "Batch Processing Hub",
-                                    color = ImmersiveTextPrimary,
-                                    fontSize = 15.sp,
-                                    fontWeight = FontWeight.Bold
-                                )
-                                Text(
-                                    text = "Multi-file conversion & sync queue",
-                                    color = ImmersiveTextSecondary,
-                                    fontSize = 11.sp
-                                )
-                            }
-                        }
-
-                        // Processing Mode Badge / Toggle
-                        Surface(
-                            shape = RectangleShape,
-                            color = if (settings.engine == ProcessingEngine.GPU_HARDWARE) AccentCyan.copy(alpha = 0.15f) else ImmersivePrimary.copy(alpha = 0.15f),
-                            border = androidx.compose.foundation.BorderStroke(
-                                1.dp,
-                                if (settings.engine == ProcessingEngine.GPU_HARDWARE) AccentCyan.copy(alpha = 0.4f) else ImmersivePrimary.copy(alpha = 0.4f)
-                            ),
-                            modifier = Modifier.clickable {
-                                val nextEngine = if (settings.engine == ProcessingEngine.GPU_HARDWARE) {
-                                    ProcessingEngine.CPU_MULTITHREAD
-                                } else {
-                                    ProcessingEngine.GPU_HARDWARE
-                                }
-                                viewModel.updateProcessingSettings(settings.copy(engine = nextEngine))
-                            }
-                        ) {
-                            Row(
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.spacedBy(4.dp),
-                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
-                            ) {
-                                Icon(
-                                    imageVector = if (settings.engine == ProcessingEngine.GPU_HARDWARE) StudioIcons.Gpu else StudioIcons.Cpu,
-                                    contentDescription = null,
-                                    tint = if (settings.engine == ProcessingEngine.GPU_HARDWARE) AccentCyan else ImmersivePrimary,
-                                    modifier = Modifier.size(12.dp)
-                                )
-                                Text(
-                                    text = if (settings.engine == ProcessingEngine.GPU_HARDWARE) "GPU Engine" else "CPU (${settings.cpuThreads} threads)",
-                                    color = if (settings.engine == ProcessingEngine.GPU_HARDWARE) AccentCyan else ImmersivePrimary,
-                                    fontSize = 10.sp,
-                                    fontWeight = FontWeight.Bold
-                                )
-                            }
-                        }
+            BatchHeader(
+                settings = settings,
+                onToggleEngine = {
+                    val next = if (settings.engine == ProcessingEngine.GPU_HARDWARE) {
+                        ProcessingEngine.CPU_MULTITHREAD
+                    } else {
+                        ProcessingEngine.GPU_HARDWARE
                     }
+                    viewModel.updateProcessingSettings(settings.copy(engine = next))
                 }
-            }
+            )
         }
 
-        // 2. Add to Batch Quick Actions
+        // 2. Queue Operations Cards
         item {
             Text(
                 text = "QUEUE OPERATIONS",
@@ -213,7 +134,7 @@ fun BatchHubScreen(
             ) {
                 // Batch Convert SRT/VTT/ASS Card
                 Card(
-                    shape = RectangleShape,
+                    shape = RoundedCornerShape(12.dp),
                     colors = CardDefaults.cardColors(containerColor = ImmersiveSurface),
                     border = androidx.compose.foundation.BorderStroke(1.dp, ImmersiveCardBorder),
                     modifier = Modifier
@@ -233,15 +154,14 @@ fun BatchHubScreen(
                             Box(
                                 modifier = Modifier
                                     .size(28.dp)
-                                    .background(ImmersivePrimary.copy(alpha = 0.15f)),
+                                    .background(AccentCyan.copy(alpha = 0.15f), RoundedCornerShape(6.dp)),
                                 contentAlignment = Alignment.Center
                             ) {
-                                Icon(StudioIcons.SyncAudio, contentDescription = null, tint = ImmersivePrimary, modifier = Modifier.size(16.dp))
+                                Icon(StudioIcons.SyncAudio, contentDescription = null, tint = AccentCyan, modifier = Modifier.size(16.dp))
                             }
 
-                            // Target format selector pill
                             Surface(
-                                shape = RectangleShape,
+                                shape = RoundedCornerShape(4.dp),
                                 color = AccentCyan.copy(alpha = 0.2f),
                                 modifier = Modifier.clickable {
                                     selectedFormatForBatch = when (selectedFormatForBatch) {
@@ -257,7 +177,7 @@ fun BatchHubScreen(
                                     color = AccentCyan,
                                     fontSize = 9.sp,
                                     fontWeight = FontWeight.Bold,
-                                    modifier = Modifier.padding(horizontal = 5.dp, vertical = 2.dp)
+                                    modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
                                 )
                             }
                         }
@@ -269,7 +189,7 @@ fun BatchHubScreen(
 
                 // Batch Time Shift Card
                 Card(
-                    shape = RectangleShape,
+                    shape = RoundedCornerShape(12.dp),
                     colors = CardDefaults.cardColors(containerColor = ImmersiveSurface),
                     border = androidx.compose.foundation.BorderStroke(1.dp, ImmersiveCardBorder),
                     modifier = Modifier
@@ -284,10 +204,10 @@ fun BatchHubScreen(
                         Box(
                             modifier = Modifier
                                 .size(28.dp)
-                                .background(AccentEmerald.copy(alpha = 0.15f)),
+                                .background(AccentAmber.copy(alpha = 0.15f), RoundedCornerShape(6.dp)),
                             contentAlignment = Alignment.Center
                         ) {
-                            Icon(StudioIcons.Timer, contentDescription = null, tint = AccentEmerald, modifier = Modifier.size(16.dp))
+                            Icon(StudioIcons.Timer, contentDescription = null, tint = AccentAmber, modifier = Modifier.size(16.dp))
                         }
 
                         Text("Batch Time Shift", color = ImmersiveTextPrimary, fontSize = 12.sp, fontWeight = FontWeight.Bold)
@@ -316,7 +236,7 @@ fun BatchHubScreen(
                         letterSpacing = 1.sp
                     )
                     Surface(
-                        shape = RectangleShape,
+                        shape = RoundedCornerShape(4.dp),
                         color = ImmersiveActionBg
                     ) {
                         Text(
@@ -337,7 +257,7 @@ fun BatchHubScreen(
                         TextButton(
                             onClick = { viewModel.clearBatchTasks() },
                             enabled = !isRunning,
-                            shape = RectangleShape
+                            shape = RoundedCornerShape(8.dp)
                         ) {
                             Text("Clear", color = ImmersiveTextSecondary, fontSize = 11.sp)
                         }
@@ -347,7 +267,7 @@ fun BatchHubScreen(
                         Button(
                             onClick = { viewModel.cancelBatchProcessing() },
                             colors = ButtonDefaults.buttonColors(containerColor = AccentRose),
-                            shape = RectangleShape,
+                            shape = RoundedCornerShape(8.dp),
                             contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 12.dp, vertical = 6.dp)
                         ) {
                             Icon(StudioIcons.Close, contentDescription = null, tint = Color.White, modifier = Modifier.size(12.dp))
@@ -359,7 +279,7 @@ fun BatchHubScreen(
                             onClick = { viewModel.startBatchProcessing() },
                             enabled = tasks.any { it.status == BatchTaskStatus.PENDING || it.status == BatchTaskStatus.FAILED },
                             colors = ButtonDefaults.buttonColors(containerColor = ImmersivePrimary),
-                            shape = RectangleShape,
+                            shape = RoundedCornerShape(8.dp),
                             contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 12.dp, vertical = 6.dp),
                             modifier = Modifier.testTag("start_batch_button")
                         ) {
@@ -375,9 +295,9 @@ fun BatchHubScreen(
         // 4. Task Queue Items
         if (tasks.isEmpty()) {
             item {
-                Surface(
-                    shape = RectangleShape,
-                    color = ImmersiveSurface,
+                Card(
+                    shape = RoundedCornerShape(12.dp),
+                    colors = CardDefaults.cardColors(containerColor = ImmersiveSurface),
                     border = androidx.compose.foundation.BorderStroke(1.dp, ImmersiveBorder),
                     modifier = Modifier.fillMaxWidth()
                 ) {
@@ -389,7 +309,7 @@ fun BatchHubScreen(
                         verticalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
                         Icon(
-                            imageVector = StudioIcons.BatchQueue,
+                            imageVector = StudioIcons.Layers,
                             contentDescription = null,
                             tint = ImmersiveTextSecondary,
                             modifier = Modifier.size(32.dp)
@@ -401,9 +321,9 @@ fun BatchHubScreen(
                             fontWeight = FontWeight.Bold
                         )
                         Text(
-                            text = "Add subtitle or video files above to batch convert formats, shift timings, or encode simultaneously.",
+                            text = "Add multiple files above to convert formats or shift timestamps concurrently in the background.",
                             color = ImmersiveTextSecondary,
-                            fontSize = 11.sp,
+                            fontSize = 10.sp,
                             textAlign = androidx.compose.ui.text.style.TextAlign.Center
                         )
                     }
@@ -411,7 +331,7 @@ fun BatchHubScreen(
             }
         } else {
             items(tasks, key = { it.id }) { task ->
-                BatchTaskItemCard(task = task)
+                BatchTaskItem(task = task)
             }
         }
 
@@ -425,16 +345,18 @@ fun BatchHubScreen(
         AlertDialog(
             onDismissRequest = { showShiftDialog = false },
             containerColor = ImmersiveSurface,
-            shape = RectangleShape,
+            shape = RoundedCornerShape(16.dp),
             title = {
-                Text("Batch Timing Offset (Audio Sync)", color = ImmersiveTextPrimary, fontSize = 14.sp, fontWeight = FontWeight.Bold)
+                Text("Batch Timestamp Offset", color = ImmersiveTextPrimary, fontSize = 15.sp, fontWeight = FontWeight.Bold)
             },
             text = {
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Text("Enter offset in milliseconds (+500 for delay, -500 for earlier):", color = ImmersiveTextSecondary, fontSize = 11.sp)
+                    Text("Enter offset in milliseconds (positive to delay, negative to advance):", color = ImmersiveTextSecondary, fontSize = 11.sp)
                     OutlinedTextField(
                         value = shiftMsInput,
                         onValueChange = { shiftMsInput = it },
+                        label = { Text("Offset (ms)", color = ImmersiveTextSecondary) },
+                        placeholder = { Text("e.g. 500 or -250") },
                         singleLine = true,
                         colors = OutlinedTextFieldDefaults.colors(
                             focusedTextColor = ImmersiveTextPrimary,
@@ -444,7 +366,7 @@ fun BatchHubScreen(
                             focusedContainerColor = ImmersiveBg,
                             unfocusedContainerColor = ImmersiveBg
                         ),
-                        shape = RectangleShape,
+                        shape = RoundedCornerShape(8.dp),
                         modifier = Modifier.fillMaxWidth()
                     )
                 }
@@ -456,98 +378,16 @@ fun BatchHubScreen(
                         shiftMultiPicker.launch("*/*")
                     },
                     colors = ButtonDefaults.buttonColors(containerColor = ImmersivePrimary),
-                    shape = RectangleShape
+                    shape = RoundedCornerShape(8.dp)
                 ) {
-                    Text("Select Files", color = Color.Black, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                    Text("Select Files & Queue", color = Color.Black, fontSize = 11.sp, fontWeight = FontWeight.Bold)
                 }
             },
             dismissButton = {
-                TextButton(onClick = { showShiftDialog = false }, shape = RectangleShape) {
+                TextButton(onClick = { showShiftDialog = false }, shape = RoundedCornerShape(8.dp)) {
                     Text("Cancel", color = ImmersiveTextSecondary, fontSize = 11.sp)
                 }
             }
         )
-    }
-}
-
-@Composable
-fun BatchTaskItemCard(
-    task: BatchTask,
-    modifier: Modifier = Modifier
-) {
-    Card(
-        shape = RectangleShape,
-        colors = CardDefaults.cardColors(containerColor = ImmersiveSurface),
-        border = androidx.compose.foundation.BorderStroke(1.dp, ImmersiveBorder),
-        modifier = modifier.fillMaxWidth()
-    ) {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(10.dp),
-            verticalArrangement = Arrangement.spacedBy(6.dp)
-        ) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Text(
-                    text = task.title,
-                    color = ImmersiveTextPrimary,
-                    fontSize = 12.sp,
-                    fontWeight = FontWeight.SemiBold,
-                    maxLines = 1,
-                    modifier = Modifier.weight(1f)
-                )
-
-                // Status Pill
-                val (statusText, statusBg, statusColor) = when (task.status) {
-                    BatchTaskStatus.PENDING -> Triple("Pending", ImmersiveActionBg, ImmersiveTextSecondary)
-                    BatchTaskStatus.PROCESSING -> Triple("Processing", AccentCyan.copy(alpha = 0.2f), AccentCyan)
-                    BatchTaskStatus.COMPLETED -> Triple("Done", AccentEmerald.copy(alpha = 0.2f), AccentEmerald)
-                    BatchTaskStatus.FAILED -> Triple("Failed", AccentRose.copy(alpha = 0.2f), AccentRose)
-                }
-
-                Surface(
-                    shape = RectangleShape,
-                    color = statusBg
-                ) {
-                    Text(
-                        text = statusText,
-                        color = statusColor,
-                        fontSize = 9.sp,
-                        fontWeight = FontWeight.Bold,
-                        modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
-                    )
-                }
-            }
-
-            if (task.status == BatchTaskStatus.PROCESSING) {
-                LinearProgressIndicator(
-                    progress = { task.progress },
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(4.dp),
-                    color = AccentCyan,
-                    trackColor = ImmersiveActionBg
-                )
-            }
-
-            if (task.resultPath != null) {
-                Text(
-                    text = "Saved: ${task.resultPath.substringAfterLast("/")}",
-                    color = AccentEmerald,
-                    fontSize = 10.sp,
-                    fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace
-                )
-            } else if (task.errorMessage != null) {
-                Text(
-                    text = task.errorMessage,
-                    color = AccentRose,
-                    fontSize = 10.sp
-                )
-            }
-        }
     }
 }

@@ -470,5 +470,88 @@ object StudioIcons {
         close()
     }.build()
 
+    // Custom Vector SVG: Undo
+    val Undo: ImageVector = ImageVector.Builder(
+        name = "StudioUndo",
+        defaultWidth = 24.dp,
+        defaultHeight = 24.dp,
+        viewportWidth = 24f,
+        viewportHeight = 24f
+    ).path(fill = SolidColor(Color.White)) {
+        moveTo(12.5f, 8f)
+        curveTo(9.46f, 8f, 6.77f, 9.17f, 4.79f, 11.08f)
+        lineTo(1f, 7.29f)
+        lineTo(1f, 16.71f)
+        lineTo(10.42f, 16.71f)
+        lineTo(6.63f, 12.92f)
+        curveTo(8.17f, 11.44f, 10.22f, 10.5f, 12.5f, 10.5f)
+        curveTo(16.98f, 10.5f, 20.65f, 13.68f, 21.47f, 17.84f)
+        lineTo(23.95f, 17.03f)
+        curveTo(22.86f, 11.83f, 18.13f, 8f, 12.5f, 8f)
+        close()
+    }.build()
+
+    // Custom Vector SVG: Redo
+    val Redo: ImageVector = ImageVector.Builder(
+        name = "StudioRedo",
+        defaultWidth = 24.dp,
+        defaultHeight = 24.dp,
+        viewportWidth = 24f,
+        viewportHeight = 24f
+    ).path(fill = SolidColor(Color.White)) {
+        moveTo(18.41f, 11.08f)
+        curveTo(16.43f, 9.17f, 13.74f, 8f, 10.7f, 8f)
+        curveTo(5.07f, 8f, 0.34f, 11.83f, -0.75f, 17.03f)
+        lineTo(1.73f, 17.84f)
+        curveTo(2.55f, 13.68f, 6.22f, 10.5f, 10.7f, 10.5f)
+        curveTo(12.98f, 10.5f, 15.03f, 11.44f, 16.57f, 12.92f)
+        lineTo(12.78f, 16.71f)
+        lineTo(22.2f, 16.71f)
+        lineTo(22.2f, 7.29f)
+        lineTo(18.41f, 11.08f)
+        close()
+    }.build()
+
+    // Custom Vector SVG: MoreVert
+    val MoreVert: ImageVector = ImageVector.Builder(
+        name = "StudioMoreVert",
+        defaultWidth = 24.dp,
+        defaultHeight = 24.dp,
+        viewportWidth = 24f,
+        viewportHeight = 24f
+    ).path(fill = SolidColor(Color.White)) {
+        moveTo(12f, 8f)
+        curveTo(13.1f, 8f, 14f, 7.1f, 14f, 6f)
+        curveTo(14f, 4.9f, 13.1f, 4f, 12f, 4f)
+        curveTo(10.9f, 4f, 10f, 4.9f, 10f, 6f)
+        curveTo(10f, 7.1f, 10.9f, 8f, 12f, 8f)
+        close()
+        moveTo(12f, 10f)
+        curveTo(10.9f, 10f, 10f, 10.9f, 10f, 12f)
+        curveTo(10f, 13.1f, 10.9f, 14f, 12f, 14f)
+        curveTo(13.1f, 14f, 14f, 13.1f, 14f, 12f)
+        curveTo(14f, 10.9f, 13.1f, 10f, 12f, 10f)
+        close()
+        moveTo(12f, 16f)
+        curveTo(10.9f, 16f, 10f, 16.9f, 10f, 18f)
+        curveTo(10f, 19.1f, 10.9f, 20f, 12f, 20f)
+        curveTo(13.1f, 20f, 14f, 19.1f, 14f, 18f)
+        curveTo(14f, 16.9f, 13.1f, 16f, 12f, 16f)
+        close()
+    }.build()
+
+    val Crop: ImageVector = AspectRatio
+    val Split: ImageVector = Cut
+    val Placement: ImageVector = Position
+    val Warning: ImageVector = Icons.Filled.ErrorOutline
     val ArrowBack = Icons.AutoMirrored.Filled.ArrowBack
+    val Search = Icons.Filled.FolderOpen
+    val FindReplace: ImageVector = SyncAudio
+    val Sparkles: ImageVector = Style
+    val Waves: ImageVector = Subtitles
+    val Diagnostics: ImageVector = Gpu
+    val Broom: ImageVector = Delete
+    val Movie: ImageVector = Video
+    val List: ImageVector = Subtitles
 }
+

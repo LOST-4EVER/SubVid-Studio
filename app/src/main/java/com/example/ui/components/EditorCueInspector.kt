@@ -15,22 +15,21 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
+import androidx.compose.material3.Slider
+import androidx.compose.material3.SliderDefaults
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
@@ -39,7 +38,6 @@ import androidx.compose.ui.unit.sp
 import com.example.model.SubtitleCue
 import com.example.model.SubtitleStyle
 import com.example.ui.icons.StudioIcons
-import com.example.ui.theme.AccentAmber
 import com.example.ui.theme.AccentCyan
 import com.example.ui.theme.AccentEmerald
 import com.example.ui.theme.AccentRose
@@ -49,7 +47,6 @@ import com.example.ui.theme.ImmersiveBorder
 import com.example.ui.theme.ImmersiveOnPrimary
 import com.example.ui.theme.ImmersivePrimary
 import com.example.ui.theme.ImmersiveSurface
-import com.example.ui.theme.ImmersiveSurfaceCard
 import com.example.ui.theme.ImmersiveTextMuted
 import com.example.ui.theme.ImmersiveTextPrimary
 import com.example.ui.theme.ImmersiveTextSecondary
@@ -66,6 +63,7 @@ fun EditorCueInspector(
     onDeleteCue: () -> Unit,
     onUpdateCueText: (SubtitleCue, String) -> Unit,
     onUpdateCueStyle: (SubtitleCue, SubtitleStyle) -> Unit,
+    onUpdateCueFontSize: (SubtitleCue, Float) -> Unit = { cue, sz -> onUpdateCueStyle(cue, cue.style.copy(fontSizeSp = sz)) },
     onJumpToCue: (SubtitleCue) -> Unit,
     onAddFirstCue: () -> Unit,
     modifier: Modifier = Modifier
@@ -151,8 +149,8 @@ fun EditorCueInspector(
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(14.dp),
-            verticalArrangement = Arrangement.spacedBy(10.dp)
+                .padding(12.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
             // Header: Cue Index, Timing, Navigation Buttons
             Row(
@@ -164,11 +162,11 @@ fun EditorCueInspector(
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(6.dp)
                 ) {
-                    // Previous Cue button (48dp interactive component size compliant)
+                    // Previous Cue button
                     IconButton(
                         onClick = onSelectPreviousCue,
                         modifier = Modifier
-                            .size(36.dp)
+                            .size(34.dp)
                             .background(ImmersiveActionBg, RectangleShape)
                             .testTag("inspector_prev_cue_btn")
                     ) {
@@ -188,13 +186,13 @@ fun EditorCueInspector(
                             Text(
                                 text = "Cue #${currentCueIndex + 1}",
                                 color = ImmersivePrimary,
-                                fontSize = 13.sp,
+                                fontSize = 12.sp,
                                 fontWeight = FontWeight.Bold
                             )
                             Text(
                                 text = "of $totalCuesCount",
                                 color = ImmersiveTextMuted,
-                                fontSize = 11.sp
+                                fontSize = 10.sp
                             )
                         }
                         Text(
@@ -210,7 +208,7 @@ fun EditorCueInspector(
                     IconButton(
                         onClick = onSelectNextCue,
                         modifier = Modifier
-                            .size(36.dp)
+                            .size(34.dp)
                             .background(ImmersiveActionBg, RectangleShape)
                             .testTag("inspector_next_cue_btn")
                     ) {
@@ -228,7 +226,6 @@ fun EditorCueInspector(
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(4.dp)
                 ) {
-                    // Quick jump to cue
                     Surface(
                         shape = RectangleShape,
                         color = ImmersiveActionBg,
@@ -237,35 +234,33 @@ fun EditorCueInspector(
                             .testTag("jump_to_cue_btn")
                     ) {
                         Row(
-                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 6.dp),
+                            modifier = Modifier.padding(horizontal = 7.dp, vertical = 5.dp),
                             verticalAlignment = Alignment.CenterVertically,
                             horizontalArrangement = Arrangement.spacedBy(3.dp)
                         ) {
-                            Icon(StudioIcons.Play, contentDescription = null, tint = AccentCyan, modifier = Modifier.size(12.dp))
-                            Text("Jump", color = ImmersiveTextPrimary, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                            Icon(StudioIcons.Play, contentDescription = null, tint = AccentCyan, modifier = Modifier.size(11.dp))
+                            Text("Jump", color = ImmersiveTextPrimary, fontSize = 10.sp, fontWeight = FontWeight.Bold)
                         }
                     }
 
-                    // Duplicate button
                     IconButton(
                         onClick = onDuplicateCue,
                         modifier = Modifier
-                            .size(32.dp)
+                            .size(30.dp)
                             .background(ImmersiveActionBg, RectangleShape)
                             .testTag("duplicate_cue_btn")
                     ) {
-                        Icon(StudioIcons.Copy, contentDescription = "Duplicate Cue", tint = AccentEmerald, modifier = Modifier.size(14.dp))
+                        Icon(StudioIcons.Copy, contentDescription = "Duplicate Cue", tint = AccentEmerald, modifier = Modifier.size(13.dp))
                     }
 
-                    // Delete button
                     IconButton(
                         onClick = onDeleteCue,
                         modifier = Modifier
-                            .size(32.dp)
+                            .size(30.dp)
                             .background(ImmersiveActionBg, RectangleShape)
                             .testTag("delete_cue_btn")
                     ) {
-                        Icon(StudioIcons.Delete, contentDescription = "Delete Cue", tint = AccentRose, modifier = Modifier.size(14.dp))
+                        Icon(StudioIcons.Delete, contentDescription = "Delete Cue", tint = AccentRose, modifier = Modifier.size(13.dp))
                     }
                 }
             }
@@ -276,9 +271,9 @@ fun EditorCueInspector(
                 onValueChange = { newText ->
                     onUpdateCueText(selectedCue, newText)
                 },
-                placeholder = { Text("Enter subtitle text for this cue...", color = ImmersiveTextMuted, fontSize = 13.sp) },
+                placeholder = { Text("Enter subtitle text for this cue...", color = ImmersiveTextMuted, fontSize = 12.sp) },
                 singleLine = false,
-                maxLines = 4,
+                maxLines = 3,
                 colors = OutlinedTextFieldDefaults.colors(
                     focusedTextColor = ImmersiveTextPrimary,
                     unfocusedTextColor = ImmersiveTextPrimary,
@@ -293,13 +288,93 @@ fun EditorCueInspector(
                     .testTag("cue_text_input")
             )
 
+            // Text Resizing Bar (Slider & Stepper Controls)
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(6.dp)
+            ) {
+                Text(
+                    text = "SIZE",
+                    color = ImmersivePrimary,
+                    fontSize = 10.sp,
+                    fontWeight = FontWeight.Bold,
+                    letterSpacing = 1.sp
+                )
+
+                // Decrease Font Size Button
+                Surface(
+                    shape = RectangleShape,
+                    color = ImmersiveActionBg,
+                    border = androidx.compose.foundation.BorderStroke(1.dp, ImmersiveBorder),
+                    modifier = Modifier
+                        .clickable {
+                            val newSize = (style.fontSizeSp - 2f).coerceIn(10f, 60f)
+                            onUpdateCueFontSize(selectedCue, newSize)
+                        }
+                        .testTag("cue_font_decrease_btn")
+                ) {
+                    Text(
+                        text = "A-",
+                        color = ImmersiveTextPrimary,
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.Bold,
+                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
+                    )
+                }
+
+                // Slider
+                Slider(
+                    value = style.fontSizeSp,
+                    onValueChange = { newSize ->
+                        onUpdateCueFontSize(selectedCue, newSize)
+                    },
+                    valueRange = 10f..60f,
+                    modifier = Modifier.weight(1f).testTag("cue_font_size_slider"),
+                    colors = SliderDefaults.colors(
+                        thumbColor = AccentCyan,
+                        activeTrackColor = AccentCyan,
+                        inactiveTrackColor = ImmersiveActionBg
+                    )
+                )
+
+                // Increase Font Size Button
+                Surface(
+                    shape = RectangleShape,
+                    color = ImmersiveActionBg,
+                    border = androidx.compose.foundation.BorderStroke(1.dp, ImmersiveBorder),
+                    modifier = Modifier
+                        .clickable {
+                            val newSize = (style.fontSizeSp + 2f).coerceIn(10f, 60f)
+                            onUpdateCueFontSize(selectedCue, newSize)
+                        }
+                        .testTag("cue_font_increase_btn")
+                ) {
+                    Text(
+                        text = "A+",
+                        color = ImmersiveTextPrimary,
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.Bold,
+                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
+                    )
+                }
+
+                Text(
+                    text = "${style.fontSizeSp.toInt()}sp",
+                    color = AccentCyan,
+                    fontSize = 11.sp,
+                    fontWeight = FontWeight.Bold,
+                    fontFamily = FontFamily.Monospace
+                )
+            }
+
             // Quick Single-Cue Styling Strip (Bold, Italic, Dark Background Box, Colors)
             FlowRow(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(6.dp),
                 verticalArrangement = Arrangement.spacedBy(6.dp)
             ) {
-                // Bold Toggle for this single cue
+                // Bold Toggle
                 Surface(
                     shape = RectangleShape,
                     color = if (style.isBold) ImmersivePrimary else ImmersiveActionBg,
@@ -311,7 +386,7 @@ fun EditorCueInspector(
                         .testTag("cue_bold_toggle")
                 ) {
                     Row(
-                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
+                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 5.dp),
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.spacedBy(4.dp)
                     ) {
@@ -319,18 +394,18 @@ fun EditorCueInspector(
                             imageVector = StudioIcons.Bold,
                             contentDescription = null,
                             tint = if (style.isBold) ImmersiveOnPrimary else ImmersiveTextSecondary,
-                            modifier = Modifier.size(13.dp)
+                            modifier = Modifier.size(12.dp)
                         )
                         Text(
                             text = "Bold",
                             color = if (style.isBold) ImmersiveOnPrimary else ImmersiveTextSecondary,
-                            fontSize = 11.sp,
+                            fontSize = 10.sp,
                             fontWeight = FontWeight.Bold
                         )
                     }
                 }
 
-                // Italic Toggle for this single cue
+                // Italic Toggle
                 Surface(
                     shape = RectangleShape,
                     color = if (style.isItalic) ImmersivePrimary else ImmersiveActionBg,
@@ -342,7 +417,7 @@ fun EditorCueInspector(
                         .testTag("cue_italic_toggle")
                 ) {
                     Row(
-                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
+                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 5.dp),
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.spacedBy(4.dp)
                     ) {
@@ -350,18 +425,18 @@ fun EditorCueInspector(
                             imageVector = StudioIcons.Italic,
                             contentDescription = null,
                             tint = if (style.isItalic) ImmersiveOnPrimary else ImmersiveTextSecondary,
-                            modifier = Modifier.size(13.dp)
+                            modifier = Modifier.size(12.dp)
                         )
                         Text(
                             text = "Italic",
                             color = if (style.isItalic) ImmersiveOnPrimary else ImmersiveTextSecondary,
-                            fontSize = 11.sp,
+                            fontSize = 10.sp,
                             fontWeight = FontWeight.Bold
                         )
                     }
                 }
 
-                // Dark Background Box Toggle for this single cue
+                // Dark Background Box Toggle
                 Surface(
                     shape = RectangleShape,
                     color = if (hasDarkBg) ImmersivePrimary else ImmersiveActionBg,
@@ -374,34 +449,34 @@ fun EditorCueInspector(
                         .testTag("cue_background_toggle")
                 ) {
                     Row(
-                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
+                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 5.dp),
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.spacedBy(4.dp)
                     ) {
                         Box(
                             modifier = Modifier
-                                .size(12.dp)
+                                .size(10.dp)
                                 .background(if (hasDarkBg) Color.Black else Color.Gray, RectangleShape)
                                 .border(1.dp, Color.White, RectangleShape)
                         )
                         Text(
                             text = if (hasDarkBg) "Box: On" else "Box: Off",
                             color = if (hasDarkBg) ImmersiveOnPrimary else ImmersiveTextSecondary,
-                            fontSize = 11.sp,
+                            fontSize = 10.sp,
                             fontWeight = FontWeight.Bold
                         )
                     }
                 }
 
-                // Quick Color Swatches for this single cue
+                // Quick Color Swatches
                 quickColors.forEach { (colorVal, _) ->
                     val isSelected = style.textColorArgb == colorVal
                     Box(
                         modifier = Modifier
-                            .size(28.dp)
+                            .size(24.dp)
                             .background(Color(colorVal), RectangleShape)
                             .border(
-                                width = if (isSelected) 2.5.dp else 1.dp,
+                                width = if (isSelected) 2.dp else 1.dp,
                                 color = if (isSelected) ImmersivePrimary else Color.Gray,
                                 shape = RectangleShape
                             )
@@ -416,7 +491,7 @@ fun EditorCueInspector(
                                 imageVector = StudioIcons.Check,
                                 contentDescription = null,
                                 tint = Color.Black,
-                                modifier = Modifier.size(12.dp)
+                                modifier = Modifier.size(11.dp)
                             )
                         }
                     }

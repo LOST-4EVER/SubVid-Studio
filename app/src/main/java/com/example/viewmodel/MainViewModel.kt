@@ -8,12 +8,14 @@ import androidx.lifecycle.viewModelScope
 import com.example.export.BatchProcessingManager
 import com.example.export.VideoExportManager
 import com.example.model.AppTab
+import com.example.model.AspectRatioOption
 import com.example.model.BatchOperationType
 import com.example.model.BatchTask
 import com.example.model.ExportConfig
 import com.example.model.ExportState
 import com.example.model.ProcessingSettings
 import com.example.model.ProjectRepository
+import com.example.model.RenderOptimizationLevel
 import com.example.model.StudioProject
 import com.example.model.SubtitleAlignment
 import com.example.model.SubtitleCue
@@ -25,6 +27,7 @@ import com.example.parser.SubtitleParser
 import com.example.parser.SubtitleWriter
 import com.example.player.PlayerUiState
 import com.example.player.VideoPlayerController
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -45,6 +48,18 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     // Navigation Tab
     private val _currentTab = MutableStateFlow(AppTab.HOME)
     val currentTab: StateFlow<AppTab> = _currentTab.asStateFlow()
+
+    // Aspect Ratio Framing (Original, 16:9, 9:16, 1:1, 4:5, 21:9)
+    private val _aspectRatio = MutableStateFlow(AspectRatioOption.ORIGINAL)
+    val aspectRatio: StateFlow<AspectRatioOption> = _aspectRatio.asStateFlow()
+
+    // Undo / Redo History Stacks
+    private val undoStack = mutableListOf<SubtitleTrack>()
+    private val redoStack = mutableListOf<SubtitleTrack>()
+    private val _canUndo = MutableStateFlow(false)
+    val canUndo: StateFlow<Boolean> = _canUndo.asStateFlow()
+    private val _canRedo = MutableStateFlow(false)
+    val canRedo: StateFlow<Boolean> = _canRedo.asStateFlow()
 
     // Projects list
     private val _projects = MutableStateFlow<List<StudioProject>>(emptyList())
@@ -98,6 +113,9 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     private val _showSubtitleListSheet = MutableStateFlow(false)
     val showSubtitleListSheet: StateFlow<Boolean> = _showSubtitleListSheet.asStateFlow()
+
+    private val _showOptimizationSheet = MutableStateFlow(false)
+    val showOptimizationSheet: StateFlow<Boolean> = _showOptimizationSheet.asStateFlow()
 
     private val _isFullscreenVideo = MutableStateFlow(false)
     val isFullscreenVideo: StateFlow<Boolean> = _isFullscreenVideo.asStateFlow()
@@ -385,10 +403,6 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
-    fun selectCue(cue: SubtitleCue) {
-        _selectedCue.value = cue
-    }
-
     fun selectNextCue() {
         val cues = _subtitleTrack.value.cues
         if (cues.isEmpty()) return
@@ -411,10 +425,73 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
+    fun setAspectRatio(option: AspectRatioOption) {
+        _aspectRatio.value = option
+    }
+
+    private fun pushUndoHistory() {
+        undoStack.add(_subtitleTrack.value)
+        if (undoStack.size > 50) {
+            undoStack.removeAt(0)
+        }
+        redoStack.clear()
+        _canUndo.value = undoStack.isNotEmpty()
+        _canRedo.value = false
+    }
+
+    fun undo() {
+        if (undoStack.isEmpty()) return
+        redoStack.add(_subtitleTrack.value)
+        val previous = undoStack.removeAt(undoStack.lastIndex)
+        _subtitleTrack.value = previous
+        _selectedCue.value = previous.cues.firstOrNull { it.id == _selectedCue.value?.id } ?: previous.cues.firstOrNull()
+        _activeCue.value = _selectedCue.value
+        _canUndo.value = undoStack.isNotEmpty()
+        _canRedo.value = redoStack.isNotEmpty()
+        saveCurrentProject()
+        _toastMessage.value = "Action Undone"
+    }
+
+    fun redo() {
+        if (redoStack.isEmpty()) return
+        undoStack.add(_subtitleTrack.value)
+        val next = redoStack.removeAt(redoStack.lastIndex)
+        _subtitleTrack.value = next
+        _selectedCue.value = next.cues.firstOrNull { it.id == _selectedCue.value?.id } ?: next.cues.firstOrNull()
+        _activeCue.value = _selectedCue.value
+        _canUndo.value = undoStack.isNotEmpty()
+        _canRedo.value = redoStack.isNotEmpty()
+        saveCurrentProject()
+        _toastMessage.value = "Action Redone"
+    }
+
+    fun selectCue(cue: SubtitleCue) {
+        _selectedCue.value = cue
+        _activeCue.value = cue // Immediately display this cue's text overlay on video
+    }
+
     fun jumpToCue(cue: SubtitleCue) {
         _selectedCue.value = cue
         _activeCue.value = cue // Immediately display this cue's text overlay on video
         playerController.seekTo(cue.startTimeMs)
+    }
+
+    fun updateCueFontSize(cue: SubtitleCue, newSizeSp: Float, applyToAll: Boolean = false) {
+        pushUndoHistory()
+        val clampedSize = newSizeSp.coerceIn(10f, 60f)
+        val targetStyle = cue.style.copy(fontSizeSp = clampedSize)
+        updateSubtitleStyle(targetStyle, applyToAll)
+    }
+
+    fun nudgeCueFontSize(deltaSp: Float) {
+        val targetCue = _selectedCue.value ?: _activeCue.value ?: return
+        val newSize = (targetCue.style.fontSizeSp + deltaSp).coerceIn(10f, 60f)
+        updateCueFontSize(targetCue, newSize, applyToAll = false)
+    }
+
+    fun setShowOptimizationSheet(show: Boolean) {
+        if (show && playerState.value.isPlaying) playerController.pause()
+        _showOptimizationSheet.value = show
     }
 
     fun updateSubtitlePosition(
@@ -699,6 +776,207 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     fun updateProcessingSettings(settings: ProcessingSettings) {
         _processingSettings.value = settings
+    }
+
+    private val _showFindReplaceDialog = MutableStateFlow(false)
+    val showFindReplaceDialog: StateFlow<Boolean> = _showFindReplaceDialog.asStateFlow()
+
+    private val _showSanitizerDialog = MutableStateFlow(false)
+    val showSanitizerDialog: StateFlow<Boolean> = _showSanitizerDialog.asStateFlow()
+
+    private val _showPresetsSheet = MutableStateFlow(false)
+    val showPresetsSheet: StateFlow<Boolean> = _showPresetsSheet.asStateFlow()
+
+    private val _showDiagnosticsDialog = MutableStateFlow(false)
+    val showDiagnosticsDialog: StateFlow<Boolean> = _showDiagnosticsDialog.asStateFlow()
+
+    fun setShowFindReplaceDialog(show: Boolean) {
+        if (show && playerState.value.isPlaying) playerController.pause()
+        _showFindReplaceDialog.value = show
+    }
+
+    fun setShowSanitizerDialog(show: Boolean) {
+        if (show && playerState.value.isPlaying) playerController.pause()
+        _showSanitizerDialog.value = show
+    }
+
+    fun setShowPresetsSheet(show: Boolean) {
+        if (show && playerState.value.isPlaying) playerController.pause()
+        _showPresetsSheet.value = show
+    }
+
+    fun setShowDiagnosticsDialog(show: Boolean) {
+        _showDiagnosticsDialog.value = show
+    }
+
+    fun findAndReplace(findText: String, replaceText: String, matchCase: Boolean = false, useRegex: Boolean = false): Int {
+        if (findText.isEmpty()) return 0
+        pushUndoHistory()
+        var replaceCount = 0
+        val currentCues = _subtitleTrack.value.cues
+
+        val updatedCues = currentCues.map { cue ->
+            val originalText = cue.text
+            val newText = try {
+                if (useRegex) {
+                    val regexOptions = if (matchCase) setOf() else setOf(RegexOption.IGNORE_CASE)
+                    val regex = Regex(findText, regexOptions)
+                    val matches = regex.findAll(originalText).count()
+                    replaceCount += matches
+                    regex.replace(originalText, replaceText)
+                } else {
+                    if (matchCase) {
+                        val occurrences = originalText.windowed(findText.length, 1).count { it == findText }
+                        replaceCount += occurrences
+                        originalText.replace(findText, replaceText)
+                    } else {
+                        // Case-insensitive literal replace
+                        val regex = Regex(Regex.escape(findText), RegexOption.IGNORE_CASE)
+                        val matches = regex.findAll(originalText).count()
+                        replaceCount += matches
+                        regex.replace(originalText, replaceText)
+                    }
+                }
+            } catch (e: Exception) {
+                originalText
+            }
+
+            cue.copy(text = newText)
+        }
+
+        if (replaceCount > 0) {
+            _subtitleTrack.update { it.copy(cues = updatedCues) }
+            val currentSelected = _selectedCue.value
+            if (currentSelected != null) {
+                _selectedCue.value = updatedCues.firstOrNull { it.id == currentSelected.id }
+            }
+            saveCurrentProject()
+            _toastMessage.value = "Replaced $replaceCount occurrences"
+        } else {
+            _toastMessage.value = "No matches found for \"$findText\""
+        }
+        return replaceCount
+    }
+
+    fun autoRepairOverlaps(minGapMs: Long = 50L): Int {
+        val currentCues = _subtitleTrack.value.cues
+        if (currentCues.isEmpty()) return 0
+
+        pushUndoHistory()
+        val sorted = currentCues.sortedBy { it.startTimeMs }
+        var repairedCount = 0
+        val repairedCues = mutableListOf<SubtitleCue>()
+
+        for (i in sorted.indices) {
+            var cue = sorted[i]
+            // Ensure end time is strictly greater than start time
+            if (cue.endTimeMs <= cue.startTimeMs) {
+                cue = cue.copy(endTimeMs = cue.startTimeMs + 1000L)
+                repairedCount++
+            }
+
+            // Check overlap with next cue
+            if (i < sorted.size - 1) {
+                val nextStart = sorted[i + 1].startTimeMs
+                if (cue.endTimeMs + minGapMs > nextStart) {
+                    val newEnd = (nextStart - minGapMs).coerceAtLeast(cue.startTimeMs + 200L)
+                    cue = cue.copy(endTimeMs = newEnd)
+                    repairedCount++
+                }
+            }
+            repairedCues.add(cue)
+        }
+
+        _subtitleTrack.update { it.copy(cues = repairedCues) }
+        val currentSelected = _selectedCue.value
+        if (currentSelected != null) {
+            _selectedCue.value = repairedCues.firstOrNull { it.id == currentSelected.id }
+        }
+        saveCurrentProject()
+        _toastMessage.value = "Sanitized $repairedCount cues (min gap: ${minGapMs}ms)"
+        return repairedCount
+    }
+
+    fun reorderCuesChronologically() {
+        pushUndoHistory()
+        val sorted = _subtitleTrack.value.cues.sortedBy { it.startTimeMs }
+        _subtitleTrack.update { it.copy(cues = sorted) }
+        saveCurrentProject()
+        _toastMessage.value = "Cues sorted chronologically"
+    }
+
+    fun applyPresetStyle(presetName: String) {
+        pushUndoHistory()
+        val style = when (presetName.lowercase()) {
+            "cinema_gold" -> SubtitleStyle(
+                fontSizeSp = 24f,
+                textColorArgb = 0xFFFFD700, // Gold
+                strokeColorArgb = 0xFF000000,
+                strokeWidthDp = 3f,
+                backgroundColorArgb = 0x00000000,
+                isBold = true,
+                shadowRadiusDp = 6f
+            )
+            "tiktok_neon" -> SubtitleStyle(
+                fontSizeSp = 26f,
+                textColorArgb = 0xFFFFF500, // Neon yellow
+                strokeColorArgb = 0xFF000000,
+                strokeWidthDp = 4f,
+                backgroundColorArgb = 0x00000000,
+                isBold = true,
+                shadowRadiusDp = 4f
+            )
+            "clean_minimal" -> SubtitleStyle(
+                fontSizeSp = 20f,
+                textColorArgb = 0xFFFFFFFF,
+                strokeColorArgb = 0x88000000,
+                strokeWidthDp = 1.5f,
+                backgroundColorArgb = 0x00000000,
+                isBold = false,
+                shadowRadiusDp = 2f
+            )
+            "closed_caption" -> SubtitleStyle(
+                fontSizeSp = 20f,
+                textColorArgb = 0xFFFFFFFF,
+                strokeColorArgb = 0x00000000,
+                strokeWidthDp = 0f,
+                backgroundColorArgb = 0xD9000000, // 85% black box
+                cornerRadiusDp = 4f,
+                paddingHorizontalDp = 12f,
+                paddingVerticalDp = 6f,
+                isBold = true
+            )
+            "anime_ass" -> SubtitleStyle(
+                fontSizeSp = 23f,
+                textColorArgb = 0xFFE0FFFF, // Light Cyan
+                strokeColorArgb = 0xFF191970, // Midnight Blue
+                strokeWidthDp = 3.5f,
+                backgroundColorArgb = 0x00000000,
+                isBold = true,
+                shadowRadiusDp = 5f
+            )
+            else -> SubtitleStyle()
+        }
+        updateSubtitleStyle(style, applyToAll = true)
+        _toastMessage.value = "Applied preset: $presetName"
+    }
+
+    fun resetSettingsToDefault() {
+        _processingSettings.value = ProcessingSettings()
+        _toastMessage.value = "Settings reset to studio defaults"
+    }
+
+    fun clearTemporaryCache() {
+        viewModelScope.launch(Dispatchers.IO) {
+            try {
+                val cacheDir = getApplication<Application>().cacheDir
+                cacheDir.deleteRecursively()
+                cacheDir.mkdirs()
+            } catch (e: Exception) {
+                Log.e("MainViewModel", "Error clearing cache", e)
+            }
+        }
+        _toastMessage.value = "Cache Purged Successfully"
     }
 
     fun setShowPlacementDialog(show: Boolean) {

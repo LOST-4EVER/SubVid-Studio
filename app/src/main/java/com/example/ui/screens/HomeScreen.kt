@@ -19,7 +19,6 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
@@ -27,7 +26,6 @@ import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Surface
@@ -41,8 +39,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
@@ -51,6 +47,10 @@ import androidx.compose.ui.unit.sp
 import com.example.model.AppTab
 import com.example.model.ProcessingEngine
 import com.example.model.StudioProject
+import com.example.ui.components.dialogs.QuickPresetStyleSheet
+import com.example.ui.components.home.HomeHeroBanner
+import com.example.ui.components.home.HomeProjectCard
+import com.example.ui.components.home.HomeQuickToolsRow
 import com.example.ui.icons.StudioIcons
 import com.example.ui.theme.AccentCyan
 import com.example.ui.theme.AccentEmerald
@@ -61,7 +61,6 @@ import com.example.ui.theme.ImmersiveBorder
 import com.example.ui.theme.ImmersiveCardBorder
 import com.example.ui.theme.ImmersivePrimary
 import com.example.ui.theme.ImmersiveSurface
-import com.example.ui.theme.ImmersiveSurfaceCard
 import com.example.ui.theme.ImmersiveTextPrimary
 import com.example.ui.theme.ImmersiveTextSecondary
 import com.example.viewmodel.MainViewModel
@@ -77,6 +76,7 @@ fun HomeScreen(
     var showNewProjectDialog by remember { mutableStateOf(false) }
     var newProjectName by remember { mutableStateOf("") }
     var projectToDelete by remember { mutableStateOf<StudioProject?>(null) }
+    var showStylePacksSheet by remember { mutableStateOf(false) }
 
     val videoMetadata by viewModel.videoMetadata.collectAsState()
     val subtitleTrack by viewModel.subtitleTrack.collectAsState()
@@ -87,6 +87,7 @@ fun HomeScreen(
     ) { uri: Uri? ->
         uri?.let {
             viewModel.loadVideoFromUri(it)
+            onNavigateTab(AppTab.EDITOR)
         }
     }
 
@@ -95,6 +96,7 @@ fun HomeScreen(
     ) { uri: Uri? ->
         uri?.let {
             viewModel.loadSubtitleFromUri(it)
+            onNavigateTab(AppTab.EDITOR)
         }
     }
 
@@ -107,9 +109,9 @@ fun HomeScreen(
     ) {
         // 1. Sleek Compact Header & Engine Status
         item {
-            Surface(
-                shape = RectangleShape,
-                color = ImmersiveSurface,
+            Card(
+                shape = RoundedCornerShape(12.dp),
+                colors = CardDefaults.cardColors(containerColor = ImmersiveSurface),
                 border = androidx.compose.foundation.BorderStroke(1.dp, ImmersiveBorder),
                 modifier = Modifier.fillMaxWidth()
             ) {
@@ -127,7 +129,7 @@ fun HomeScreen(
                         Box(
                             modifier = Modifier
                                 .size(36.dp)
-                                .background(ImmersivePrimary),
+                                .background(ImmersivePrimary, RoundedCornerShape(8.dp)),
                             contentAlignment = Alignment.Center
                         ) {
                             Icon(
@@ -155,7 +157,7 @@ fun HomeScreen(
 
                     // Engine Badge
                     Surface(
-                        shape = RectangleShape,
+                        shape = RoundedCornerShape(6.dp),
                         color = if (settings.engine == ProcessingEngine.GPU_HARDWARE) AccentCyan.copy(alpha = 0.15f) else ImmersivePrimary.copy(alpha = 0.15f),
                         border = androidx.compose.foundation.BorderStroke(
                             1.dp,
@@ -185,12 +187,24 @@ fun HomeScreen(
             }
         }
 
+        // Hero Studio Banner Card
+        item {
+            HomeHeroBanner(
+                onNewProject = {
+                    newProjectName = "Project ${projects.size + 1}"
+                    showNewProjectDialog = true
+                },
+                onImportVideo = { videoPickerLauncher.launch("video/*") },
+                onImportSubtitle = { subtitlePickerLauncher.launch("*/*") }
+            )
+        }
+
         // Active Session Resume Banner (if media or subtitles loaded)
         if (hasActiveSession) {
             item {
-                Surface(
-                    shape = RectangleShape,
-                    color = ImmersivePrimary.copy(alpha = 0.08f),
+                Card(
+                    shape = RoundedCornerShape(12.dp),
+                    colors = CardDefaults.cardColors(containerColor = ImmersivePrimary.copy(alpha = 0.08f)),
                     border = androidx.compose.foundation.BorderStroke(1.5.dp, ImmersivePrimary),
                     modifier = Modifier
                         .fillMaxWidth()
@@ -212,7 +226,7 @@ fun HomeScreen(
                             Box(
                                 modifier = Modifier
                                     .size(32.dp)
-                                    .background(ImmersivePrimary),
+                                    .background(ImmersivePrimary, RoundedCornerShape(6.dp)),
                                 contentAlignment = Alignment.Center
                             ) {
                                 Icon(
@@ -245,7 +259,7 @@ fun HomeScreen(
                         Button(
                             onClick = { onNavigateTab(AppTab.EDITOR) },
                             colors = ButtonDefaults.buttonColors(containerColor = ImmersivePrimary),
-                            shape = RectangleShape,
+                            shape = RoundedCornerShape(8.dp),
                             contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 12.dp, vertical = 6.dp)
                         ) {
                             Text("Resume", color = Color.Black, fontSize = 11.sp, fontWeight = FontWeight.Bold)
@@ -255,10 +269,10 @@ fun HomeScreen(
             }
         }
 
-        // 2. Quick Action Cards (Add Video, Import Subtitle, Batch Hub)
+        // 2. Quick Action Cards (Add Video, Import Subtitle, Batch Hub, Style Packs)
         item {
             Text(
-                text = "QUICK ACTIONS",
+                text = "QUICK ACTIONS & TOOLS",
                 color = ImmersiveTextSecondary,
                 fontSize = 11.sp,
                 fontWeight = FontWeight.Bold,
@@ -266,118 +280,11 @@ fun HomeScreen(
             )
             Spacer(Modifier.height(6.dp))
 
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(10.dp)
-            ) {
-                // Import Video Card
-                Card(
-                    shape = RectangleShape,
-                    colors = CardDefaults.cardColors(containerColor = ImmersiveSurface),
-                    border = androidx.compose.foundation.BorderStroke(1.dp, ImmersiveCardBorder),
-                    modifier = Modifier
-                        .weight(1f)
-                        .clickable { videoPickerLauncher.launch("video/*") }
-                        .testTag("home_import_video_btn")
-                ) {
-                    Column(
-                        modifier = Modifier.padding(12.dp),
-                        verticalArrangement = Arrangement.spacedBy(6.dp)
-                    ) {
-                        Box(
-                            modifier = Modifier
-                                .size(28.dp)
-                                .background(ImmersivePrimary.copy(alpha = 0.15f)),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Icon(StudioIcons.Video, contentDescription = null, tint = ImmersivePrimary, modifier = Modifier.size(16.dp))
-                        }
-                        Text(
-                            text = "Add Video File",
-                            color = ImmersiveTextPrimary,
-                            fontSize = 12.sp,
-                            fontWeight = FontWeight.Bold
-                        )
-                        Text(
-                            text = "MP4, MKV, WebM",
-                            color = ImmersiveTextSecondary,
-                            fontSize = 10.sp
-                        )
-                    }
-                }
-
-                // Import Subtitle Card
-                Card(
-                    shape = RectangleShape,
-                    colors = CardDefaults.cardColors(containerColor = ImmersiveSurface),
-                    border = androidx.compose.foundation.BorderStroke(1.dp, ImmersiveCardBorder),
-                    modifier = Modifier
-                        .weight(1f)
-                        .clickable { subtitlePickerLauncher.launch("*/*") }
-                        .testTag("home_import_sub_btn")
-                ) {
-                    Column(
-                        modifier = Modifier.padding(12.dp),
-                        verticalArrangement = Arrangement.spacedBy(6.dp)
-                    ) {
-                        Box(
-                            modifier = Modifier
-                                .size(28.dp)
-                                .background(AccentCyan.copy(alpha = 0.15f)),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Icon(StudioIcons.Subtitles, contentDescription = null, tint = AccentCyan, modifier = Modifier.size(16.dp))
-                        }
-                        Text(
-                            text = "Add Subtitle",
-                            color = ImmersiveTextPrimary,
-                            fontSize = 12.sp,
-                            fontWeight = FontWeight.Bold
-                        )
-                        Text(
-                            text = "SRT, VTT, ASS",
-                            color = ImmersiveTextSecondary,
-                            fontSize = 10.sp
-                        )
-                    }
-                }
-
-                // Batch Hub Card
-                Card(
-                    shape = RectangleShape,
-                    colors = CardDefaults.cardColors(containerColor = ImmersiveSurface),
-                    border = androidx.compose.foundation.BorderStroke(1.dp, ImmersiveCardBorder),
-                    modifier = Modifier
-                        .weight(1f)
-                        .clickable { onNavigateTab(AppTab.BATCH) }
-                        .testTag("home_batch_hub_btn")
-                ) {
-                    Column(
-                        modifier = Modifier.padding(12.dp),
-                        verticalArrangement = Arrangement.spacedBy(6.dp)
-                    ) {
-                        Box(
-                            modifier = Modifier
-                                .size(28.dp)
-                                .background(AccentEmerald.copy(alpha = 0.15f)),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Icon(StudioIcons.BatchQueue, contentDescription = null, tint = AccentEmerald, modifier = Modifier.size(16.dp))
-                        }
-                        Text(
-                            text = "Batch Hub",
-                            color = ImmersiveTextPrimary,
-                            fontSize = 12.sp,
-                            fontWeight = FontWeight.Bold
-                        )
-                        Text(
-                            text = "Multi-file Queue",
-                            color = ImmersiveTextSecondary,
-                            fontSize = 10.sp
-                        )
-                    }
-                }
-            }
+            HomeQuickToolsRow(
+                onImportSubtitle = { subtitlePickerLauncher.launch("*/*") },
+                onOpenBatchHub = { onNavigateTab(AppTab.BATCH) },
+                onOpenStylePacks = { showStylePacksSheet = true }
+            )
         }
 
         // 3. Projects Header & "+ New Project" Button
@@ -399,7 +306,7 @@ fun HomeScreen(
                         letterSpacing = 1.sp
                     )
                     Surface(
-                        shape = RectangleShape,
+                        shape = RoundedCornerShape(4.dp),
                         color = ImmersiveActionBg
                     ) {
                         Text(
@@ -413,7 +320,7 @@ fun HomeScreen(
                 }
 
                 Surface(
-                    shape = RectangleShape,
+                    shape = RoundedCornerShape(6.dp),
                     color = ImmersivePrimary.copy(alpha = 0.15f),
                     border = androidx.compose.foundation.BorderStroke(1.dp, ImmersivePrimary.copy(alpha = 0.4f)),
                     modifier = Modifier.clickable {
@@ -436,9 +343,9 @@ fun HomeScreen(
         // 4. Projects List or Prompt to Add File
         if (projects.isEmpty()) {
             item {
-                Surface(
-                    shape = RectangleShape,
-                    color = ImmersiveSurface,
+                Card(
+                    shape = RoundedCornerShape(12.dp),
+                    colors = CardDefaults.cardColors(containerColor = ImmersiveSurface),
                     border = androidx.compose.foundation.BorderStroke(1.dp, ImmersiveBorder),
                     modifier = Modifier.fillMaxWidth()
                 ) {
@@ -452,7 +359,7 @@ fun HomeScreen(
                         Box(
                             modifier = Modifier
                                 .size(48.dp)
-                                .background(ImmersiveActionBg),
+                                .background(ImmersiveActionBg, RoundedCornerShape(10.dp)),
                             contentAlignment = Alignment.Center
                         ) {
                             Icon(
@@ -484,7 +391,7 @@ fun HomeScreen(
                             Button(
                                 onClick = { videoPickerLauncher.launch("video/*") },
                                 colors = ButtonDefaults.buttonColors(containerColor = ImmersivePrimary),
-                                shape = RectangleShape,
+                                shape = RoundedCornerShape(8.dp),
                                 contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 14.dp, vertical = 8.dp)
                             ) {
                                 Icon(StudioIcons.Video, contentDescription = null, tint = Color.Black, modifier = Modifier.size(14.dp))
@@ -493,11 +400,12 @@ fun HomeScreen(
                             }
 
                             Surface(
-                                shape = RectangleShape,
+                                shape = RoundedCornerShape(8.dp),
                                 color = ImmersiveActionBg,
                                 border = androidx.compose.foundation.BorderStroke(1.dp, ImmersiveBorder),
                                 modifier = Modifier.clickable {
                                     viewModel.createNewProject("Project 1")
+                                    onNavigateTab(AppTab.EDITOR)
                                 }
                             ) {
                                 Row(
@@ -515,9 +423,12 @@ fun HomeScreen(
             }
         } else {
             items(projects, key = { it.id }) { project ->
-                ProjectListItemCard(
+                HomeProjectCard(
                     project = project,
-                    onOpen = { viewModel.openProject(project) },
+                    onOpen = {
+                        viewModel.openProject(project)
+                        onNavigateTab(AppTab.EDITOR)
+                    },
                     onDelete = { projectToDelete = project }
                 )
             }
@@ -529,12 +440,23 @@ fun HomeScreen(
         }
     }
 
+    // Quick Preset Style Sheet
+    if (showStylePacksSheet) {
+        QuickPresetStyleSheet(
+            onDismiss = { showStylePacksSheet = false },
+            onSelectPreset = { presetId ->
+                viewModel.applyPresetStyle(presetId)
+                onNavigateTab(AppTab.EDITOR)
+            }
+        )
+    }
+
     // New Project Name Dialog
     if (showNewProjectDialog) {
         AlertDialog(
             onDismissRequest = { showNewProjectDialog = false },
             containerColor = ImmersiveSurface,
-            shape = RectangleShape,
+            shape = RoundedCornerShape(16.dp),
             title = {
                 Text("Create New Project", color = ImmersiveTextPrimary, fontSize = 15.sp, fontWeight = FontWeight.Bold)
             },
@@ -553,7 +475,7 @@ fun HomeScreen(
                             focusedContainerColor = ImmersiveBg,
                             unfocusedContainerColor = ImmersiveBg
                         ),
-                        shape = RectangleShape,
+                        shape = RoundedCornerShape(8.dp),
                         modifier = Modifier.fillMaxWidth()
                     )
                 }
@@ -564,16 +486,17 @@ fun HomeScreen(
                         if (newProjectName.isNotBlank()) {
                             viewModel.createNewProject(newProjectName.trim())
                             showNewProjectDialog = false
+                            onNavigateTab(AppTab.EDITOR)
                         }
                     },
                     colors = ButtonDefaults.buttonColors(containerColor = ImmersivePrimary),
-                    shape = RectangleShape
+                    shape = RoundedCornerShape(8.dp)
                 ) {
                     Text("Create & Open", color = Color.Black, fontSize = 12.sp, fontWeight = FontWeight.Bold)
                 }
             },
             dismissButton = {
-                TextButton(onClick = { showNewProjectDialog = false }, shape = RectangleShape) {
+                TextButton(onClick = { showNewProjectDialog = false }, shape = RoundedCornerShape(8.dp)) {
                     Text("Cancel", color = ImmersiveTextSecondary, fontSize = 12.sp)
                 }
             }
@@ -586,7 +509,7 @@ fun HomeScreen(
         AlertDialog(
             onDismissRequest = { projectToDelete = null },
             containerColor = ImmersiveSurface,
-            shape = RectangleShape,
+            shape = RoundedCornerShape(16.dp),
             title = {
                 Text("Delete Project?", color = ImmersiveTextPrimary, fontSize = 15.sp, fontWeight = FontWeight.Bold)
             },
@@ -604,142 +527,16 @@ fun HomeScreen(
                         projectToDelete = null
                     },
                     colors = ButtonDefaults.buttonColors(containerColor = AccentRose),
-                    shape = RectangleShape
+                    shape = RoundedCornerShape(8.dp)
                 ) {
                     Text("Delete", color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.Bold)
                 }
             },
             dismissButton = {
-                TextButton(onClick = { projectToDelete = null }, shape = RectangleShape) {
+                TextButton(onClick = { projectToDelete = null }, shape = RoundedCornerShape(8.dp)) {
                     Text("Cancel", color = ImmersiveTextSecondary, fontSize = 12.sp)
                 }
             }
         )
-    }
-}
-
-@Composable
-fun ProjectListItemCard(
-    project: StudioProject,
-    onOpen: () -> Unit,
-    onDelete: () -> Unit,
-    modifier: Modifier = Modifier
-) {
-    Card(
-        shape = RectangleShape,
-        colors = CardDefaults.cardColors(containerColor = ImmersiveSurface),
-        border = androidx.compose.foundation.BorderStroke(1.dp, ImmersiveBorder),
-        modifier = modifier
-            .fillMaxWidth()
-            .clickable { onOpen() }
-    ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(12.dp),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(12.dp),
-                modifier = Modifier.weight(1f)
-            ) {
-                // Project Thumbnail / Icon
-                Box(
-                    modifier = Modifier
-                        .size(40.dp)
-                        .background(if (project.hasVideo) ImmersiveSurfaceCard else ImmersiveActionBg)
-                        .border(1.dp, ImmersiveBorder, RectangleShape),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Icon(
-                        imageVector = if (project.hasVideo) StudioIcons.Video else StudioIcons.Folder,
-                        contentDescription = null,
-                        tint = if (project.hasVideo) ImmersivePrimary else ImmersiveTextSecondary,
-                        modifier = Modifier.size(20.dp)
-                    )
-                }
-
-                // Project Details
-                Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                    Text(
-                        text = project.name,
-                        color = ImmersiveTextPrimary,
-                        fontSize = 13.sp,
-                        fontWeight = FontWeight.Bold,
-                        maxLines = 1
-                    )
-
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(6.dp)
-                    ) {
-                        Surface(
-                            shape = RectangleShape,
-                            color = AccentCyan.copy(alpha = 0.15f)
-                        ) {
-                            Text(
-                                text = project.subtitleFormat.extension.uppercase(),
-                                color = AccentCyan,
-                                fontSize = 9.sp,
-                                fontWeight = FontWeight.Bold,
-                                modifier = Modifier.padding(horizontal = 4.dp, vertical = 1.dp)
-                            )
-                        }
-
-                        Text(
-                            text = if (project.cueCount > 0) "${project.cueCount} cues" else "0 cues",
-                            color = ImmersiveTextSecondary,
-                            fontSize = 10.sp
-                        )
-
-                        Text(
-                            text = "•",
-                            color = ImmersiveTextSecondary,
-                            fontSize = 10.sp
-                        )
-
-                        Text(
-                            text = project.formattedDate,
-                            color = ImmersiveTextSecondary,
-                            fontSize = 10.sp
-                        )
-                    }
-                }
-            }
-
-            // Actions
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(4.dp)
-            ) {
-                Surface(
-                    shape = RectangleShape,
-                    color = ImmersivePrimary,
-                    modifier = Modifier.clickable { onOpen() }
-                ) {
-                    Text(
-                        text = "Open",
-                        color = Color.Black,
-                        fontSize = 11.sp,
-                        fontWeight = FontWeight.Bold,
-                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp)
-                    )
-                }
-
-                IconButton(
-                    onClick = onDelete,
-                    modifier = Modifier.size(28.dp)
-                ) {
-                    Icon(
-                        imageVector = StudioIcons.Delete,
-                        contentDescription = "Delete Project",
-                        tint = AccentRose.copy(alpha = 0.8f),
-                        modifier = Modifier.size(16.dp)
-                    )
-                }
-            }
-        }
     }
 }

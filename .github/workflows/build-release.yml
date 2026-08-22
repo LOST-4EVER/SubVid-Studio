@@ -12,14 +12,23 @@ on:
       - main
       - master
   workflow_dispatch:
+    inputs:
+      release_title:
+        description: 'Custom Release Title (optional)'
+        required: false
+        default: ''
+      release_notes:
+        description: 'Custom Release Notes / Changelog'
+        required: false
+        default: ''
 
 concurrency:
   group: build-release-${{ github.ref }}
-  cancel-in-progress: true
+  cancel-in-progress: false
 
 jobs:
   test:
-    name: Run Unit Tests
+    name: Run Unit Tests & Verification
     runs-on: ubuntu-latest
 
     steps:
@@ -46,7 +55,7 @@ jobs:
         run: gradle testDebugUnitTest --no-daemon
 
   build:
-    name: Build & Publish Release
+    name: Build & Publish Advanced Release
     needs: test
     if: github.event_name != 'pull_request'
     runs-on: ubuntu-latest
@@ -57,6 +66,8 @@ jobs:
     steps:
       - name: Checkout Source Code
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Set up JDK 17
         uses: actions/setup-java@v4
@@ -69,7 +80,7 @@ jobs:
         with:
           gradle-version: "9.3.1"
 
-      - name: Ensure Environment and Keystores Exist
+      - name: Prepare Signing Keystores and Env
         run: |
           touch .env.example
           touch .env
@@ -80,27 +91,48 @@ jobs:
           fi
 
           if [ -n "${{ secrets.KEYSTORE_BASE64 }}" ]; then
-            echo "Decoding release keystore from GitHub Secret..."
+            echo "Decoding release keystore from GitHub Secrets..."
             echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 -d > release.keystore
           else
             echo "Generating automated release signing keystore..."
-            keytool -genkey -v -keystore release.keystore -alias releasekey -keyalg RSA -keysize 2048 -validity 10000 -storepass android -keypass android -dname "CN=SubVidStudio, OU=Android, O=SubVid, L=City, S=State, C=US"
+            keytool -genkey -v -keystore release.keystore -alias releasekey -keyalg RSA -keysize 2048 -validity 10000 -storepass android -keypass android -dname "CN=SubVidStudio, OU=Android, O=SubVid, L=San Francisco, S=CA, C=US"
           fi
 
-      - name: Determine and Inject Version Number
-        id: version_step
+      - name: Compute Dynamic Version & Unique Release Metadata
+        id: meta
         run: |
           BUILD_NUM="${{ github.run_number }}"
+          SHORT_SHA="$(git rev-parse --short HEAD)"
+          BUILD_DATE="$(date +'%Y.%m.%d')"
+          BUILD_TIMESTAMP="$(date +'%Y-%m-%d %H:%M:%S UTC')"
+          TAG_TIMESTAMP="$(date +'%Y%m%d-%H%M%S')"
+
           if [[ "${{ github.ref }}" == refs/tags/v* ]]; then
             RAW_TAG="${{ github.ref_name }}"
             CLEAN_VERSION="${RAW_TAG#v}"
+            RELEASE_TAG="${RAW_TAG}"
+            RELEASE_NAME="SubVid Studio ${RAW_TAG}"
           else
-            CLEAN_VERSION="1.1.0-build.${BUILD_NUM}"
+            CLEAN_VERSION="1.2.${BUILD_NUM}"
+            RELEASE_TAG="v1.2.${BUILD_NUM}-${TAG_TIMESTAMP}"
+            
+            CUSTOM_TITLE="${{ github.event.inputs.release_title }}"
+            if [ -n "$CUSTOM_TITLE" ]; then
+              RELEASE_NAME="SubVid Studio - ${CUSTOM_TITLE} (v${CLEAN_VERSION})"
+            else
+              RELEASE_NAME="SubVid Studio v${CLEAN_VERSION} (${BUILD_DATE})"
+            fi
           fi
+
           echo "Injecting VersionName: ${CLEAN_VERSION} and VersionCode: ${BUILD_NUM} into app/build.gradle.kts"
           sed -i 's/versionName = ".*"/versionName = "'"${CLEAN_VERSION}"'"/' app/build.gradle.kts
           sed -i 's/versionCode = .*/versionCode = '"${BUILD_NUM}"'/' app/build.gradle.kts
+
           echo "clean_version=${CLEAN_VERSION}" >> $GITHUB_OUTPUT
+          echo "release_tag=${RELEASE_TAG}" >> $GITHUB_OUTPUT
+          echo "release_name=${RELEASE_NAME}" >> $GITHUB_OUTPUT
+          echo "build_timestamp=${BUILD_TIMESTAMP}" >> $GITHUB_OUTPUT
+          echo "short_sha=${SHORT_SHA}" >> $GITHUB_OUTPUT
 
       - name: Build Debug and Release APKs
         env:
@@ -110,68 +142,80 @@ jobs:
           KEY_PASSWORD: ${{ secrets.KEY_PASSWORD || 'android' }}
         run: gradle assembleDebug assembleRelease --no-daemon
 
-      - name: Organize APK Artifacts
+      - name: Package & Generate Checksums
+        id: pkg
         run: |
-          mkdir -p release_apks
-          if [ -f "app/build/outputs/apk/debug/app-debug.apk" ]; then
-            cp app/build/outputs/apk/debug/app-debug.apk release_apks/SubVidStudio-debug.apk
-          fi
+          mkdir -p dist
+          
+          # Copy & Rename Release and Debug APKs
           if [ -f "app/build/outputs/apk/release/app-release.apk" ]; then
-            cp app/build/outputs/apk/release/app-release.apk release_apks/SubVidStudio-release.apk
-          elif [ -f "app/build/outputs/apk/release/app-release-unsigned.apk" ]; then
-            cp app/build/outputs/apk/release/app-release-unsigned.apk release_apks/SubVidStudio-release.apk
+            cp app/build/outputs/apk/release/app-release.apk dist/SubVidStudio-v${{ steps.meta.outputs.clean_version }}-release.apk
+            cp app/build/outputs/apk/release/app-release.apk dist/SubVidStudio-release.apk
           fi
-          ls -la release_apks/
+          if [ -f "app/build/outputs/apk/debug/app-debug.apk" ]; then
+            cp app/build/outputs/apk/debug/app-debug.apk dist/SubVidStudio-v${{ steps.meta.outputs.clean_version }}-debug.apk
+            cp app/build/outputs/apk/debug/app-debug.apk dist/SubVidStudio-debug.apk
+          fi
 
-      - name: Upload APKs as Workflow Artifacts
+          # Compute SHA-256 Checksums
+          cd dist
+          sha256sum *.apk > sha256_checksums.txt
+          cat sha256_checksums.txt
+          cd ..
+
+      - name: Upload Workflow Build Artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: subvid-studio-apks
-          path: release_apks/*
+          name: subvid-studio-v${{ steps.meta.outputs.clean_version }}-build-${{ github.run_number }}
+          path: dist/*
+          retention-days: 30
 
-      - name: Generate Dynamic Release Tag & Name
-        id: release_info
-        run: |
-          BUILD_NUM="${{ github.run_number }}"
-          TIMESTAMP="$(date +'%Y-%m-%d %H:%M UTC')"
-          TAG_DATE="$(date +'%Y%m%d-%H%M%S')"
-          CLEAN_VER="${{ steps.version_step.outputs.clean_version }}"
-          if [[ "${{ github.ref }}" == refs/tags/v* ]]; then
-            TAG_NAME="${{ github.ref_name }}"
-            RELEASE_NAME="SubVid Studio ${TAG_NAME}"
-          else
-            TAG_NAME="v${CLEAN_VER}-${TAG_DATE}"
-            RELEASE_NAME="SubVid Studio v${CLEAN_VER} (${TIMESTAMP})"
-          fi
-          echo "tag_name=${TAG_NAME}" >> $GITHUB_OUTPUT
-          echo "release_name=${RELEASE_NAME}" >> $GITHUB_OUTPUT
-
-      - name: Create GitHub Release
+      - name: Create Independent GitHub Release
         uses: softprops/action-gh-release@v2
         if: startsWith(github.ref, 'refs/tags/') || github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master' || github.event_name == 'workflow_dispatch'
         with:
-          tag_name: ${{ steps.release_info.outputs.tag_name }}
+          tag_name: ${{ steps.meta.outputs.release_tag }}
           target_commitish: ${{ github.sha }}
-          name: ${{ steps.release_info.outputs.release_name }}
+          name: ${{ steps.meta.outputs.release_name }}
           make_latest: "true"
           generate_release_notes: true
           fail_on_unmatched_files: false
           body: |
-            ## ${{ steps.release_info.outputs.release_name }}
+            # 🎬 ${{ steps.meta.outputs.release_name }}
 
-            This automated release delivers the latest high-performance build of **SubVid Studio**:
-            - 📦 **SubVidStudio-release.apk** (Signed Release Build, R8 Minified & Resource Optimized)
-            - 🛠️ **SubVidStudio-debug.apk** (Debug Build with Logcat Instrumentation)
+            **Build Date:** `${{ steps.meta.outputs.build_timestamp }}`  
+            **Commit Hash:** `${{ steps.meta.outputs.short_sha }}`  
+            **Version Code:** `${{ github.run_number }}` | **Version Name:** `v${{ steps.meta.outputs.clean_version }}`
 
-            ### Key Highlights & Features:
-            - 📺 **Fullscreen Live Video Playback & Editing**: Seamless full-screen mode with interactive subtitle positioning and gesture controls.
-            - ⚡ **Multi-track Canvas Timeline**: Hardware-accelerated 60 FPS scrubber with millisecond precision and micro-nudging (±0.1s / ±0.5s).
-            - 🔤 **Universal Subtitle Formats**: Complete parsing and export for SRT, WebVTT, and ASS/SSA with custom styles, tags, and position preservation.
-            - 🚀 **Hardware Video Acceleration**: Android MediaCodec & MediaMuxer encoder for lossless soft-muxing and high-bitrate hardcoded subtitle burn-in.
-            - 🧩 **CPU/GPU Batch Processing Hub**: Multi-threaded bulk format conversion, time shifting, and video encoding.
-            - 📱 **Universal Android Compatibility**: Optimized for Android 16 (API 36) down to Android 7.0 (API 24) across phones, foldables, and tablets.
+            ---
+
+            ### 📦 Download Assets
+            | Asset | Description |
+            |---|---|
+            | **`SubVidStudio-release.apk`** | Production Signed & Minified Release Build |
+            | **`SubVidStudio-debug.apk`** | Debug Build with Comprehensive Logging |
+            | **`sha256_checksums.txt`** | Cryptographic verification checksums for all binaries |
+
+            ---
+
+            ### ✨ Key Features & Capabilities
+            - 🎞️ **Real-Time Video Subtitle Synchronizer**: Seamless frame-accurate seeking with gesture drag & drop positioning.
+            - 🔍 **Find & Replace Engine**: Rapid regex and case-sensitive batch text replacement across all cues.
+            - 🧹 **Timing Sanitizer**: One-tap repair for overlapping timestamps, negative durations, and chronological order.
+            - 🎨 **Style Presets & Typography**: Built-in Cinema Classic, TikTok / Reels Pop, Neon Cyberpunk, Minimalist & Boxed presets.
+            - 🚀 **Hardware Accelerated Processing**: Android `MediaCodec` + `MediaMuxer` pipeline with lossy hardcoding and lossless soft-muxing.
+            - ⚡ **Batch Processing Hub**: Multi-threaded subtitle format conversion (SRT, WebVTT, ASS/SSA) and timing offsets.
+            - 📱 **Adaptive Material 3 Design**: Optimized for portrait, landscape, tablets, and foldable devices.
+
+            ---
+
+            ### 🔒 SHA-256 Checksums
+            Verify your downloads using the checksums recorded in `sha256_checksums.txt`.
           files: |
-            release_apks/SubVidStudio-release.apk
-            release_apks/SubVidStudio-debug.apk
+            dist/SubVidStudio-v${{ steps.meta.outputs.clean_version }}-release.apk
+            dist/SubVidStudio-release.apk
+            dist/SubVidStudio-v${{ steps.meta.outputs.clean_version }}-debug.apk
+            dist/SubVidStudio-debug.apk
+            dist/sha256_checksums.txt
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
